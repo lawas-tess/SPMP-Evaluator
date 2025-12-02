@@ -15,8 +15,8 @@ build/
 target/
 
 # IDE and editor
-.vscode/
-.idea/
+*.vscode/
+*.idea/
 *.swp
 *.swo
 *~
