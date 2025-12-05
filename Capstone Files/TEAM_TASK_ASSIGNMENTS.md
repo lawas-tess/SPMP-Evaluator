@@ -42,6 +42,26 @@ git push -u origin feature/<YourLastName>
 **Assigned To:** Lawas, Jose Raphael (Leader)  
 **Status:** ✅ Mostly Complete
 
+### Use Cases (1.1 - 1.8)
+
+#### Authentication (1.1 - 1.4)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 1.1 | User Registration | ✅ `AuthController.java` | ✅ `AuthPage.jsx` | HIGH | ✅ DONE |
+| 1.2 | User Login | ✅ `AuthController.java` | ✅ `AuthPage.jsx` | HIGH | ✅ DONE |
+| 1.3 | Password Reset | ⬜ TODO | ⬜ TODO | HIGH | 🔴 TODO |
+| 1.4 | Change Password | ⬜ TODO | ⬜ TODO | MEDIUM | 🔴 TODO |
+
+#### Security (1.5 - 1.8)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 1.5 | JWT Token Management | ✅ `JwtService.java` | ✅ `AuthContext.jsx` | HIGH | ✅ DONE |
+| 1.6 | Role-Based Access | ✅ `SecurityConfig.java` | ✅ `ProtectedRoute.jsx` | HIGH | ✅ DONE |
+| 1.7 | Login Attempt Logging | ⬜ TODO | N/A | MEDIUM | 🔴 TODO |
+| 1.8 | Account Lockout | ⬜ TODO | ⬜ TODO | LOW | 🔴 TODO |
+
 ### Current Implementation
 - ✅ User Registration with role selection (STUDENT, PROFESSOR, PM)
 - ✅ User Login with JWT token generation
@@ -216,6 +236,24 @@ openrouter.model=mistralai/mistral-7b-instruct:free
 **Assigned To:** Laborada, John Joseph  
 **Status:** ✅ Partially Complete
 
+### Use Cases (3.1 - 3.6)
+
+#### Document Parsing (3.1 - 3.3)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 3.1 | PDF Text Extraction | ✅ `DocumentParser.java` | N/A | HIGH | ✅ DONE |
+| 3.2 | DOCX Text Extraction | ✅ `DocumentParser.java` | N/A | HIGH | ✅ DONE |
+| 3.3 | Error Handling for Corrupt Files | ⬜ TODO | ⬜ Toast message | HIGH | 🔴 TODO |
+
+#### Section Detection (3.4 - 3.6)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 3.4 | Keyword-Based Section Detection | ✅ `IEEE1058StandardConstants.java` | N/A | HIGH | ✅ DONE |
+| 3.5 | AI-Powered Section Detection | ⬜ `OpenRouterEvaluationService.java` | N/A | HIGH | 🔴 TODO |
+| 3.6 | Metadata Extraction (author, date) | ⬜ TODO | ⬜ Display in UI | LOW | 🔴 TODO |
+
 ### Current Implementation
 - ✅ PDF text extraction using Apache PDFBox
 - ✅ DOCX text extraction using Apache POI
@@ -281,6 +319,26 @@ public class OpenRouterEvaluationService {
 **Branch:** `feature/Pepito`  
 **Assigned To:** Pepito, John Patrick  
 **Status:** ✅ Partially Complete
+
+### Use Cases (4.1 - 4.8)
+
+#### Scoring System (4.1 - 4.4)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 4.1 | Calculate Overall Compliance Score | ✅ `ComplianceEvaluationService.java` | ✅ `EvaluationResults.jsx` | HIGH | ✅ DONE |
+| 4.2 | Section-by-Section Scoring | ✅ `SectionAnalysis.java` | ✅ `EvaluationResults.jsx` | HIGH | ✅ DONE |
+| 4.3 | Configurable Scoring Weights | ⬜ `application.properties` | ⬜ Admin settings | HIGH | 🔴 TODO |
+| 4.4 | Score History Tracking | ⬜ `ComplianceScoreHistory.java` | ⬜ History view | LOW | 🔴 TODO |
+
+#### Feedback Generation (4.5 - 4.8)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 4.5 | Basic Feedback (missing sections) | ✅ `ComplianceEvaluationService.java` | ✅ `EvaluationResults.jsx` | HIGH | ✅ DONE |
+| 4.6 | Enhanced Detailed Feedback | ⬜ TODO | ⬜ Expanded recommendations | HIGH | 🔴 TODO |
+| 4.7 | Re-evaluation of Documents | ⬜ `SPMPDocumentService.java` | ⬜ Re-evaluate button | MEDIUM | 🔴 TODO |
+| 4.8 | Export Reports (PDF/Excel) | ⬜ `ReportExportService.java` | ⬜ Export button | LOW | 🔴 TODO |
 
 ### Current Implementation
 - ✅ Scoring formula with structure (30%) + completeness (70%) weights
@@ -391,6 +449,33 @@ public ResponseEntity<?> overrideScore(
 **Branch:** `feature/Verano`  
 **Assigned To:** Verano, Joel  
 **Status:** 🔴 Not Started
+
+### Use Cases (NFR 5.1 - 5.10)
+
+#### Performance (5.1 - 5.3)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 5.1 | API Response <3s | ⬜ Performance profiling | N/A | HIGH | 🔴 TODO |
+| 5.2 | Load Testing (JMeter/Gatling) | ⬜ Test scripts | N/A | MEDIUM | 🔴 TODO |
+| 5.3 | Database Query Optimization | ⬜ Indexing, caching | N/A | MEDIUM | 🔴 TODO |
+
+#### Security (5.4 - 5.6)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 5.4 | Input Validation & Sanitization | ⬜ DTO validation annotations | ⬜ Form validation | HIGH | 🔴 TODO |
+| 5.5 | Rate Limiting (Bucket4j) | ⬜ `RateLimitingInterceptor.java` | N/A | HIGH | 🔴 TODO |
+| 5.6 | Security Headers (CSP, XSS) | ⬜ `SecurityConfig.java` | N/A | HIGH | 🔴 TODO |
+
+#### Monitoring & Docs (5.7 - 5.10)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 5.7 | Structured Logging (SLF4J) | ⬜ All service classes | N/A | HIGH | 🔴 TODO |
+| 5.8 | Health Checks (Actuator) | ⬜ `application.properties` | N/A | MEDIUM | 🔴 TODO |
+| 5.9 | Swagger/OpenAPI Docs | ⬜ `springdoc-openapi` dependency | N/A | MEDIUM | 🔴 TODO |
+| 5.10 | Global Exception Handler | ⬜ `GlobalExceptionHandler.java` | ⬜ Error toast | HIGH | 🔴 TODO |
 
 ### Tasks Overview
 
