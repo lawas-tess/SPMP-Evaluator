@@ -77,20 +77,22 @@ This module documents all use cases for the SPMP Evaluator system related to **A
 | **Use Case Name** | Override Score |
 | **Primary Actor** | Professor |
 | **Secondary Actors** | System |
-| **Description** | Allows **professors to manually override an AI-generated SPMP evaluation score**. The action must be justified, and the system logs all overrides with timestamp and justification, updating the official record. |
+| **Description** | Allows **professors to manually override an SPMP evaluation score**. The action must be justified, and the system logs all overrides with timestamp and justification, updating the official record. |
 | **Preconditions** | Professor is authenticated and authorized. A score already exists for the selected SPMP submission. The override justification form is available. |
 | **Postconditions** | Original score is preserved for audit. Override score becomes official. Student is notified of score change. |
 
-### Basic Flow ✅ ALL IMPLEMENTED
+### Basic Flow 🔄 PARTIALLY IMPLEMENTED
 
 | Step | Action | Status |
 |:----:|:-------|:------:|
-| 1 | Professor views AI-generated score | ✅ |
+| 1 | Professor views existing score | ✅ (UI ready, needs AI score) |
 | 2 | Professor clicks override option | ✅ |
 | 3 | Professor enters new score | ✅ |
 | 4 | Professor provides justification | ✅ |
 | 5 | System validates and saves override | ✅ |
 | 6 | System notifies student | ✅ |
+
+> **Note:** Override UI and backend are complete. Requires AI-generated scores (UC 4.1) to have scores to override.
 
 ### Alternative Flows
 - **Cancel override:** Professor discards changes
@@ -108,19 +110,21 @@ This module documents all use cases for the SPMP Evaluator system related to **A
 | **Use Case Name** | View Scores & Feedback |
 | **Primary Actor** | Student, Professor, Project Manager |
 | **Secondary Actors** | System |
-| **Description** | Allows authenticated users to **view scoring results and feedback**. **Students** view only their own scores; **Professors** view all their students' evaluations; **Project Managers** access aggregated results for performance tracking. The system ensures proper access control based on user roles. |
+| **Description** | Allows authenticated users to **view scoring results and feedback**. **Students** view only their own scores; **Professors** view all their students' evaluations. The system ensures proper access control based on user roles. |
 | **Preconditions** | User is authenticated and authorized. Scoring and feedback data are available in the system. Role-based permissions are configured. |
 | **Postconditions** | User views appropriate scores based on role. System logs viewing activity. |
 
-### Basic Flow ✅ ALL IMPLEMENTED
+### Basic Flow 🔄 PARTIALLY IMPLEMENTED
 
 | Step | Action | Status |
 |:----:|:-------|:------:|
 | 1 | User navigates to scores/feedback section | ✅ |
 | 2 | System verifies user role and permissions | ✅ |
-| 3 | System retrieves appropriate scores | ✅ |
-| 4 | System displays scores and feedback | ✅ |
+| 3 | System retrieves appropriate scores | ✅ (structure ready) |
+| 4 | System displays scores and feedback | 🔄 (needs AI-generated data) |
 | 5 | System logs viewing activity | ✅ |
+
+> **Note:** UI and role-based access control are complete. Requires AI scoring (UC 4.1) to generate actual scores to display.
 
 ### Alternative Flows
 - **Export scores:** User downloads scores as PDF/CSV
@@ -135,9 +139,11 @@ This module documents all use cases for the SPMP Evaluator system related to **A
 
 | Use Case | Description | Status |
 |:---------|:------------|:------:|
-| UC 4.1 | Generate Score & Feedback | 🔄 In Progress |
+| UC 4.1 | Generate Score & Feedback | 🔄 In Progress (AI pending) |
 | UC 4.2 | Apply Custom Rubric | ✅ Complete |
-| UC 4.3 | Override Score | ✅ Complete |
-| UC 4.5 | View Scores & Feedback | ✅ Complete |
+| UC 4.3 | Override Score | 🔄 UI Complete (needs AI scores) |
+| UC 4.5 | View Scores & Feedback | 🔄 UI Complete (needs AI scores) |
 
-**Total: 3/4 Use Cases Implemented (75%)**
+**Total: 1/4 Use Cases Fully Implemented (25%)**
+
+> **Dependency Note:** UC 4.3 and UC 4.5 have complete UI and backend logic, but require UC 4.1 (AI scoring) to be functional end-to-end.

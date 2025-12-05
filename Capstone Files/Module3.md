@@ -19,7 +19,7 @@ This module documents all use cases for the SPMP Evaluator system related to **D
 | **Preconditions** | User must be authenticated. Parser module must be configured by the Professor. SPMP document must be in a supported format. |
 | **Postconditions** | Document is stored and queued for parsing. Parser module receives document for analysis. |
 
-### Basic Flow 🔄 IN PROGRESS
+### Basic Flow 🔄 PARTIALLY IMPLEMENTED
 
 | Step | Action | Status |
 |:----:|:-------|:------:|
@@ -27,8 +27,10 @@ This module documents all use cases for the SPMP Evaluator system related to **D
 | 2 | User selects SPMP document file | ✅ |
 | 3 | System validates file format and size | ✅ |
 | 4 | System stores document in database | ✅ |
-| 5 | System forwards document to parser module | 🔄 |
+| 5 | System forwards document to parser module | ❌ Parser not implemented |
 | 6 | System displays upload confirmation | ✅ |
+
+> **Note:** File upload UI and storage are complete. Parser module integration is pending.
 
 ### Alternative Flows
 - **Invalid format:** System displays error and lists supported formats
@@ -50,16 +52,18 @@ This module documents all use cases for the SPMP Evaluator system related to **D
 | **Preconditions** | Professor must be authenticated. Parser module must be initialized. System access permissions must allow configuration changes. |
 | **Postconditions** | Parser configuration (rules, clause weights, and criteria) is saved successfully. Updated configuration is applied to future SPMP evaluations. |
 
-### Basic Flow 🔄 IN PROGRESS
+### Basic Flow ❌ NOT IMPLEMENTED
 
 | Step | Action | Status |
 |:----:|:-------|:------:|
-| 1 | Professor navigates to parser configuration | ✅ |
-| 2 | Professor views current IEEE 1058 clause mappings | 🔄 |
-| 3 | Professor adjusts clause weights | ✅ |
-| 4 | Professor defines custom rule mappings | 🔄 |
-| 5 | System validates configuration | 🔄 |
-| 6 | System saves and applies configuration | 🔄 |
+| 1 | Professor navigates to parser configuration | ✅ (UI placeholder) |
+| 2 | Professor views current IEEE 1058 clause mappings | ❌ |
+| 3 | Professor adjusts clause weights | ✅ (GradingCriteria covers this) |
+| 4 | Professor defines custom rule mappings | ❌ |
+| 5 | System validates configuration | ❌ |
+| 6 | System saves and applies configuration | ❌ |
+
+> **Note:** Clause weight adjustment is available via GradingCriteria (UC 2.7). Full parser configuration requires parser module.
 
 ### Alternative Flows
 - **Reset to defaults:** Professor restores original IEEE 1058 mappings
@@ -81,16 +85,18 @@ This module documents all use cases for the SPMP Evaluator system related to **D
 | **Preconditions** | SPMP document must have been successfully uploaded and processed. Parser feedback must be generated and stored. User must be authenticated with appropriate role. |
 | **Postconditions** | User successfully views structured compliance feedback. System logs access activity for auditing and version tracking. |
 
-### Basic Flow 🔄 IN PROGRESS
+### Basic Flow ❌ NOT IMPLEMENTED
 
 | Step | Action | Status |
 |:----:|:-------|:------:|
 | 1 | User navigates to feedback section | ✅ |
 | 2 | User selects evaluated document | ✅ |
-| 3 | System retrieves parser feedback | 🔄 |
-| 4 | System displays compliance scores | 🔄 |
-| 5 | System shows missing clauses and recommendations | 🔄 |
+| 3 | System retrieves parser feedback | ❌ Parser not implemented |
+| 4 | System displays compliance scores | ❌ No AI scores generated |
+| 5 | System shows missing clauses and recommendations | ❌ |
 | 6 | System logs viewing activity | ✅ |
+
+> **Note:** UI navigation and activity logging are complete. Requires parser module to generate feedback.
 
 ### Alternative Flows
 - **Export feedback:** User downloads feedback as PDF/CSV
@@ -105,8 +111,15 @@ This module documents all use cases for the SPMP Evaluator system related to **D
 
 | Use Case | Description | Status |
 |:---------|:------------|:------:|
-| UC 3.1 | Upload SPMP Document | 🔄 In Progress |
-| UC 3.2 | Configure Parser Module | 🔄 In Progress |
-| UC 3.3 | View Parser Feedback | 🔄 In Progress |
+| UC 3.1 | Upload SPMP Document | 🔄 Upload works, parser pending |
+| UC 3.2 | Configure Parser Module | ❌ Not Implemented |
+| UC 3.3 | View Parser Feedback | ❌ Not Implemented |
 
-**Total: 0/3 Use Cases Fully Implemented (Parser Module Pending)**
+**Total: 0/3 Use Cases Fully Implemented**
+
+> **Blocker:** The AI Parser Module is not yet implemented. This module requires:
+> 1. Document parsing engine (IEEE 1058 clause detection)
+> 2. AI-based compliance analysis
+> 3. Feedback generation with recommendations
+>
+> **What Works:** File upload, storage, and basic UI navigation are complete.
