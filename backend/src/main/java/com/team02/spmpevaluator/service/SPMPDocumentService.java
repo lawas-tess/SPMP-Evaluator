@@ -29,6 +29,7 @@ public class SPMPDocumentService {
 
     private final SPMPDocumentRepository repository;
     private final ComplianceScoreRepository complianceScoreRepository;
+    private final NotificationService notificationService;
     private static final String UPLOAD_DIR = "uploads/documents/";
     private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
@@ -257,6 +258,7 @@ public class SPMPDocumentService {
     /**
      * Override document evaluation score (Use Case 2.8 - Override AI Results).
      * Professors can review AI-generated evaluations and override if necessary.
+     * Notifies student of score override (UC 2.8 Step 5).
      */
     public SPMPDocument overrideScore(Long documentId, Double newScore, String notes, User professor) {
         SPMPDocument document = repository.findById(documentId)
@@ -273,6 +275,14 @@ public class SPMPDocumentService {
         complianceScore.setReviewedAt(LocalDateTime.now());
 
         complianceScoreRepository.save(complianceScore);
+        
+        // UC 2.8: Notify student of score override
+        notificationService.notifyScoreOverride(
+            document.getUploadedBy().getId(), 
+            documentId, 
+            newScore,
+            notes
+        );
 
         return document;
     }

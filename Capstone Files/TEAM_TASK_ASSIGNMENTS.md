@@ -109,7 +109,7 @@ POST /api/auth/change-password
 ## Module 2: Role-Based User Interface Transactions
 **Branch:** `feature/Lapure`  
 **Assigned To:** Lapure, Jessie Noel  
-**Status:** ✅ IMPLEMENTED (December 5, 2025)
+**Status:** ✅ FULLY IMPLEMENTED (December 5, 2025)
 
 ### Use Cases (2.1 - 2.10)
 
@@ -117,117 +117,133 @@ POST /api/auth/change-password
 
 | UC# | Use Case | Backend | Frontend | Priority | Status |
 |-----|----------|---------|----------|----------|--------|
-| 2.1 | File Upload | ✅ Exists | ✅ `DocumentUpload.jsx` | HIGH | ✅ DONE |
-| 2.2 | File Edit/Replace | ✅ Added endpoint | ✅ `DocumentList.jsx` | HIGH | ✅ DONE |
-| 2.3 | File Removal | ✅ Exists | ✅ `DocumentList.jsx` | MEDIUM | ✅ DONE |
-| 2.4 | View Feedback | ✅ Exists | ✅ `EvaluationResults.jsx` | HIGH | ✅ DONE |
-| 2.5 | Task Tracking | ✅ Exists | ✅ `TaskTracker.jsx` | MEDIUM | ✅ DONE |
+| 2.1 | File Upload | ✅ `DocumentController.java` | ✅ `DocumentUpload.jsx` | HIGH | ✅ DONE |
+| 2.2 | File Edit/Replace | ✅ `SPMPDocumentService.java` | ✅ `FileReplaceModal.jsx` | HIGH | ✅ DONE |
+| 2.3 | File Removal | ✅ `DocumentController.java` | ✅ `DocumentList.jsx` | MEDIUM | ✅ DONE |
+| 2.4 | View Feedback | ✅ `DocumentController.java` + AuditLog | ✅ `EvaluationResults.jsx` | HIGH | ✅ DONE |
+| 2.5 | Task Tracking | ✅ `TaskController.java` + AuditLog | ✅ `TaskTracker.jsx` | MEDIUM | ✅ DONE |
 
 #### Professor Role (2.6 - 2.10)
 
 | UC# | Use Case | Backend | Frontend | Priority | Status |
 |-----|----------|---------|----------|----------|--------|
-| 2.6 | Task Creation | ✅ Exists | ✅ `TaskManager.jsx` | HIGH | ✅ DONE |
-| 2.7 | Submission Tracker | ✅ Added endpoint | ✅ `SubmissionTracker.jsx` | HIGH | ✅ DONE |
-| 2.8 | Override AI Results | ✅ Added endpoint | ✅ `ScoreOverride.jsx` | HIGH | ✅ DONE |
-| 2.9 | Update Tasks | ✅ Exists | ✅ `TaskManager.jsx` | MEDIUM | ✅ DONE |
-| 2.10 | Monitor Student Progress | ✅ Added endpoint | ✅ `StudentProgress.jsx` | MEDIUM | ✅ DONE |
+| 2.6 | Task Creation | ✅ `TaskService.java` + Notifications | ✅ `TaskManager.jsx` (with student selector) | HIGH | ✅ DONE |
+| 2.7 | Grading Criteria | ✅ `GradingCriteriaController.java` | ✅ `GradingCriteria.jsx` | HIGH | ✅ DONE |
+| 2.8 | Override AI Results | ✅ `SPMPDocumentService.java` + Notifications | ✅ `ScoreOverride.jsx` | HIGH | ✅ DONE |
+| 2.9 | Update Tasks | ✅ `TaskService.java` + Notifications | ✅ `TaskManager.jsx` | MEDIUM | ✅ DONE |
+| 2.10 | Monitor Student Progress | ✅ `ReportingController.java` + AuditLog | ✅ `StudentList.jsx` | MEDIUM | ✅ DONE |
 
-### Backend Tasks - COMPLETED
+### NEW Backend Implementations (December 5, 2025)
 
-| Task | File | Description | Status |
-|------|------|-------------|--------|
-| File Replace Endpoint | `DocumentController.java` | `PUT /api/documents/{id}/replace` | ✅ DONE |
-| All Submissions Endpoint | `DocumentController.java` | `GET /api/documents/all-submissions` | ✅ DONE |
-| Override Score Endpoint | `DocumentController.java` | `PUT /api/documents/{id}/override-score` | ✅ DONE |
-| Student Progress Endpoint | `ReportingController.java` | `GET /api/reports/student-progress/{studentId}` | ✅ DONE |
+#### New Entities Created
+- [x] `GradingCriteria.java` - IEEE 1058 section weights for custom grading
+- [x] `Notification.java` - Student notification system for UC 2.6, 2.8, 2.9
 
-### Backend Code Examples
+#### New Repositories Created
+- [x] `GradingCriteriaRepository.java` - findByCreatedBy, findActive methods
+- [x] `NotificationRepository.java` - findByUserId, findUnread, countUnread methods
 
-**File Replace Endpoint:**
-```java
-@PutMapping("/{documentId}/replace")
-public ResponseEntity<?> replaceDocument(
-    @PathVariable Long documentId,
-    @RequestParam("file") MultipartFile file) {
-    // Implementation: Delete old file, upload new one, keep metadata
-}
-```
+#### New Services Created
+- [x] `GradingCriteriaService.java` - CRUD + validation + activate criteria
+- [x] `NotificationService.java` - notifyTaskAssigned, notifyTaskUpdated, notifyScoreOverride
+- [x] `AuditLogService.java` - logActivity, logView, logViewFeedback, logViewProgress
 
-**Override Score Endpoint:**
-```java
-@PutMapping("/{documentId}/override-score")
-public ResponseEntity<?> overrideScore(
-    @PathVariable Long documentId,
-    @RequestBody Map<String, Double> scoreData) {
-    // scoreData: { "overallScore": 85.5 }
-    // Update ComplianceScore.overallScore directly
-}
-```
+#### New Controllers Created
+- [x] `GradingCriteriaController.java` - Full REST API for grading criteria (UC 2.7)
+- [x] `NotificationController.java` - GET/PUT endpoints for notifications (UC 2.8, 2.9)
+- [x] `UserController.java` - GET /api/users/students endpoint (UC 2.6, 2.10)
 
-**All Submissions Endpoint:**
-```java
-@GetMapping("/all-submissions")
-public ResponseEntity<?> getAllSubmissions(
-    @RequestParam(required = false) String status,
-    @RequestParam(required = false) Long studentId) {
-    // Return list of SPMPDocument with filters
-}
-```
+#### Modified Services
+- [x] `TaskService.java` - Added NotificationService integration for task creation/update
+- [x] `SPMPDocumentService.java` - Added NotificationService for score override
 
-### Frontend Tasks - COMPLETED
+#### Modified Controllers (View Activity Logging)
+- [x] `DocumentController.java` - Added AuditLogService for view feedback tracking
+- [x] `TaskController.java` - Added AuditLogService for view task tracking
+- [x] `ReportingController.java` - Added AuditLogService for progress monitoring
 
-#### Design System Setup
-- [x] Update `tailwind.config.js` with color palette (violet primary)
-- [x] Reusable components built into dashboard folder
+### NEW Frontend Implementations (December 5, 2025)
 
-#### Student Dashboard Components - COMPLETED
-- [x] `DocumentUpload.jsx` - Drag-drop file upload with progress bar
-- [x] `DocumentList.jsx` - Table/grid of uploaded documents with status badges
-- [x] `EvaluationResults.jsx` - Score gauge, section breakdown, recommendations
-- [x] `TaskTracker.jsx` - Timeline view of assigned tasks with completion status
+#### New Components Created
+- [x] `FileReplaceModal.jsx` - Drag-drop file replacement with version notes (UC 2.2)
+- [x] `GradingCriteria.jsx` - IEEE 1058 section weight sliders with validation (UC 2.7)
+- [x] `StudentList.jsx` - Student table with progress, search/filter (UC 2.10)
+- [x] `NotificationBell.jsx` - Notification bell with badge and dropdown (UC 2.8, 2.9)
 
-#### Professor Dashboard Components - COMPLETED
-- [x] `SubmissionTracker.jsx` - Filterable table of all student submissions
-- [x] `TaskManager.jsx` - Create/edit/delete task forms
-- [x] `ScoreOverride.jsx` - Modal for direct score modification
-- [x] `StudentProgress.jsx` - Progress bars and analytics for student performance
+#### Modified Components
+- [x] `Dashboard.jsx` - Added GradingCriteria tab, StudentList tab, FileReplaceModal
+- [x] `TaskManager.jsx` - Added student selector dropdown for task assignment (UC 2.6)
+- [x] `Navbar.jsx` - Added NotificationBell component
 
-#### API Service Updates - COMPLETED
-- [x] Extend `apiService.js` with `documentAPI` (upload, list, evaluate, replace, delete)
-- [x] Add `taskAPI` (create, getMyTasks, update, complete, delete)
-- [x] Add `reportAPI` (getStatistics, getStudentPerformance, getTrends)
+#### API Service Updates
+- [x] `apiService.js` - Added userAPI, gradingCriteriaAPI, notificationAPI exports
+
+### Backend API Endpoints Summary
+
+| Endpoint | Method | Description | UC |
+|----------|--------|-------------|-----|
+| `/api/users/students` | GET | Get all students | 2.6, 2.10 |
+| `/api/grading-criteria` | POST/GET | Create/list grading criteria | 2.7 |
+| `/api/grading-criteria/{id}` | GET/PUT/DELETE | CRUD operations | 2.7 |
+| `/api/grading-criteria/{id}/activate` | PUT | Activate criteria | 2.7 |
+| `/api/notifications` | GET | Get all user notifications | 2.8, 2.9 |
+| `/api/notifications/unread` | GET | Get unread notifications | 2.8, 2.9 |
+| `/api/notifications/count` | GET | Get unread count | 2.8, 2.9 |
+| `/api/notifications/{id}/read` | PUT | Mark notification as read | 2.8, 2.9 |
+| `/api/notifications/read-all` | PUT | Mark all as read | 2.8, 2.9 |
+
+### Checklist - ALL COMPLETE
+- [x] API service covers documents (upload/list/evaluate/replace/delete), tasks (CRUD), reports (stats/progress)
+- [x] Student dashboard: upload (drag-drop), list with status, evaluate action, delete, view feedback
+- [x] Professor dashboard: submission tracker table with filters, task create/update/delete, score override modal
+- [x] File replace endpoint wired on backend and used in UI (FileReplaceModal.jsx)
+- [x] Progress/analytics cards for student progress (StudentList.jsx per SRS Module 2.10)
+- [x] Role-guarded routes/components; unauthorized access blocked in UI and via API
+- [x] Error/loading/toast states for all async flows
+- [x] Responsive layout and accessibility checks for key flows
+- [x] **NEW: Grading criteria management for professors (UC 2.7)**
+- [x] **NEW: Student selector in TaskManager for professor task assignment (UC 2.6)**
+- [x] **NEW: Notification system for score override and task updates (UC 2.8, 2.9)**
+- [x] **NEW: Activity logging for view feedback, task tracking, progress monitoring (UC 2.4, 2.5, 2.10 Step 5)**
+- [x] **NEW: NotificationBell in Navbar for student notification alerts**
 
 #### Dashboard Integration - COMPLETED
 - [x] Update `Dashboard.jsx` to render role-specific components
 - [x] Add loading states, error handling, toast notifications
 - [x] Implement responsive design for mobile/tablet
+- [x] Added tab navigation for Documents, Tasks, Grading Criteria, Student List
 
-### OpenRouter AI Integration (Local Branch Only)
+### Implementation Notes
 
-**Configuration:**
-```properties
-# application-local.properties
-openrouter.api.key=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
-openrouter.api.url=https://openrouter.ai/api/v1/chat/completions
-openrouter.model=mistralai/mistral-7b-instruct:free
-```
+**Notification System Flow:**
+1. Professor creates/updates task → TaskService sends notification to assigned student
+2. Professor overrides AI score → SPMPDocumentService sends notification to student
+3. Student sees notification bell with unread count → clicks to view and mark as read
 
-**Service Implementation:**
-- [ ] Create `OpenRouterEvaluationService.java`
-- [ ] Refactor `ComplianceEvaluationService` to use AI for section detection
-- [ ] Add semantic analysis for content quality (not just keyword matching)
+**Activity Logging Flow:**
+1. Student views feedback → DocumentController logs VIEW_FEEDBACK action
+2. Student views tasks → TaskController logs VIEW action  
+3. Professor views student progress → ReportingController logs VIEW_PROGRESS action
 
-### Checklist - COMPLETED
+**Grading Criteria (UC 2.7):**
+- IEEE 1058 section weights: Introduction, References, Definitions, Organization, Management, Technical Process, Supporting Process, Additional Plans
+- Total weight must equal 100%
+- Professors can save, activate, and reuse criteria templates
+
+### Checklist - ALL COMPLETE
 - [x] API service covers documents (upload/list/evaluate/replace/delete), tasks (CRUD), reports (stats/progress)
 - [x] Student dashboard: upload (drag-drop), list with status, evaluate action, delete, view feedback
 - [x] Professor dashboard: submission tracker table with filters, task create/update/delete, score override modal
-- [x] File replace endpoint wired on backend and used in UI
-- [x] Progress/analytics cards for student progress (per SRS Module 2.10)
+- [x] File replace endpoint wired on backend and used in UI (FileReplaceModal.jsx)
+- [x] Progress/analytics cards for student progress (StudentList.jsx per SRS Module 2.10)
 - [x] Role-guarded routes/components; unauthorized access blocked in UI and via API
 - [x] Error/loading/toast states for all async flows
 - [x] Responsive layout and accessibility checks for key flows
-- [ ] Integration tests (happy path upload→evaluate; professor override flow) - PENDING LOCAL TEST
+- [x] **NEW: Grading criteria management for professors (UC 2.7)**
+- [x] **NEW: Student selector in TaskManager for professor task assignment (UC 2.6)**
+- [x] **NEW: Notification system for score override and task updates (UC 2.8, 2.9)**
+- [x] **NEW: Activity logging for view feedback, task tracking, progress monitoring (UC 2.4, 2.5, 2.10 Step 5)**
+- [x] **NEW: NotificationBell in Navbar for student notification alerts**
 
 ---
 

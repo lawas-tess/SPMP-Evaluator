@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import NotificationBell from './NotificationBell';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -18,6 +19,10 @@ const Navbar = () => {
           <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">
             {user?.role}
           </span>
+          
+          {/* Notification Bell - UC 2.8, 2.9: Student notification alerts */}
+          <NotificationBell />
+          
           <button
             onClick={logout}
             className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg transition"

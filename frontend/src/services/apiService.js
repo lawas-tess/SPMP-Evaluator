@@ -123,4 +123,39 @@ export const reportAPI = {
   getComplianceTrends: (daysBack = 30) => api.get(`/reports/compliance-trends?daysBack=${daysBack}`),
 };
 
+// User API (Module 2: Use Cases 2.6, 2.10)
+export const userAPI = {
+  // UC 2.6: Get students for task assignment
+  // UC 2.10: Get student list for progress monitoring
+  getAllStudents: () => api.get('/users/students'),
+  getAllProfessors: () => api.get('/users/professors'),
+  getAllUsers: () => api.get('/users'),
+  getUserById: (userId) => api.get(`/users/${userId}`),
+  toggleUserStatus: (userId, enabled) => api.put(`/users/${userId}/status?enabled=${enabled}`),
+};
+
+// Grading Criteria API (Module 2: Use Case 2.7)
+export const gradingCriteriaAPI = {
+  // UC 2.7: Set Grading Criteria (Professor)
+  create: (criteriaData) => api.post('/grading-criteria', criteriaData),
+  update: (criteriaId, criteriaData) => api.put(`/grading-criteria/${criteriaId}`, criteriaData),
+  delete: (criteriaId) => api.delete(`/grading-criteria/${criteriaId}`),
+  getMyCriteria: () => api.get('/grading-criteria'),
+  getActiveCriteria: () => api.get('/grading-criteria/active'),
+  getCriteriaById: (criteriaId) => api.get(`/grading-criteria/${criteriaId}`),
+  setActiveCriteria: (criteriaId) => api.put(`/grading-criteria/${criteriaId}/activate`),
+  getDefaultCriteria: () => api.get('/grading-criteria/default'),
+};
+
+// Notification API (Module 2: Use Cases 2.8, 2.9)
+export const notificationAPI = {
+  // UC 2.8: Get notifications (score override alerts)
+  // UC 2.9: Get notifications (task update alerts)
+  getMyNotifications: () => api.get('/notifications'),
+  getUnreadNotifications: () => api.get('/notifications/unread'),
+  getUnreadCount: () => api.get('/notifications/count'),
+  markAsRead: (notificationId) => api.put(`/notifications/${notificationId}/read`),
+  markAllAsRead: () => api.put('/notifications/read-all'),
+};
+
 export default api;
