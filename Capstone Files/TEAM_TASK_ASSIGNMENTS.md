@@ -42,6 +42,26 @@ git push -u origin feature/<YourLastName>
 **Assigned To:** Lawas, Jose Raphael (Leader)  
 **Status:** ✅ Mostly Complete
 
+### Use Cases (1.1 - 1.8)
+
+#### Authentication (1.1 - 1.4)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 1.1 | User Registration | ✅ `AuthController.java` | ✅ `AuthPage.jsx` | HIGH | ✅ DONE |
+| 1.2 | User Login | ✅ `AuthController.java` | ✅ `AuthPage.jsx` | HIGH | ✅ DONE |
+| 1.3 | Password Reset | ⬜ TODO | ⬜ TODO | HIGH | 🔴 TODO |
+| 1.4 | Change Password | ⬜ TODO | ⬜ TODO | MEDIUM | 🔴 TODO |
+
+#### Security (1.5 - 1.8)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 1.5 | JWT Token Management | ✅ `JwtService.java` | ✅ `AuthContext.jsx` | HIGH | ✅ DONE |
+| 1.6 | Role-Based Access | ✅ `SecurityConfig.java` | ✅ `ProtectedRoute.jsx` | HIGH | ✅ DONE |
+| 1.7 | Login Attempt Logging | ⬜ TODO | N/A | MEDIUM | 🔴 TODO |
+| 1.8 | Account Lockout | ⬜ TODO | ⬜ TODO | LOW | 🔴 TODO |
+
 ### Current Implementation
 - ✅ User Registration with role selection (STUDENT, PROFESSOR, PM)
 - ✅ User Login with JWT token generation
@@ -89,38 +109,38 @@ POST /api/auth/change-password
 ## Module 2: Role-Based User Interface Transactions
 **Branch:** `feature/Lapure`  
 **Assigned To:** Lapure, Jessie Noel  
-**Status:** 🔴 Not Started
+**Status:** ✅ IMPLEMENTED (December 5, 2025)
 
 ### Use Cases (2.1 - 2.10)
 
 #### Student Role (2.1 - 2.5)
 
-| UC# | Use Case | Backend | Frontend | Priority |
-|-----|----------|---------|----------|----------|
-| 2.1 | File Upload | ✅ Exists | ❌ Build | HIGH |
-| 2.2 | File Edit/Replace | ⚠️ Add endpoint | ❌ Build | HIGH |
-| 2.3 | File Removal | ✅ Exists | ❌ Build | MEDIUM |
-| 2.4 | View Feedback | ✅ Exists | ❌ Build | HIGH |
-| 2.5 | Task Tracking | ✅ Exists | ❌ Build | MEDIUM |
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 2.1 | File Upload | ✅ Exists | ✅ `DocumentUpload.jsx` | HIGH | ✅ DONE |
+| 2.2 | File Edit/Replace | ✅ Added endpoint | ✅ `DocumentList.jsx` | HIGH | ✅ DONE |
+| 2.3 | File Removal | ✅ Exists | ✅ `DocumentList.jsx` | MEDIUM | ✅ DONE |
+| 2.4 | View Feedback | ✅ Exists | ✅ `EvaluationResults.jsx` | HIGH | ✅ DONE |
+| 2.5 | Task Tracking | ✅ Exists | ✅ `TaskTracker.jsx` | MEDIUM | ✅ DONE |
 
 #### Professor Role (2.6 - 2.10)
 
-| UC# | Use Case | Backend | Frontend | Priority |
-|-----|----------|---------|----------|----------|
-| 2.6 | Task Creation | ✅ Exists | ❌ Build | HIGH |
-| 2.7 | Submission Tracker | ⚠️ Add endpoint | ❌ Build | HIGH |
-| 2.8 | Override AI Results | ⚠️ Add endpoint | ❌ Build | HIGH |
-| 2.9 | Update Tasks | ✅ Exists | ❌ Build | MEDIUM |
-| 2.10 | Monitor Student Progress | ⚠️ Add endpoint | ❌ Build | MEDIUM |
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 2.6 | Task Creation | ✅ Exists | ✅ `TaskManager.jsx` | HIGH | ✅ DONE |
+| 2.7 | Submission Tracker | ✅ Added endpoint | ✅ `SubmissionTracker.jsx` | HIGH | ✅ DONE |
+| 2.8 | Override AI Results | ✅ Added endpoint | ✅ `ScoreOverride.jsx` | HIGH | ✅ DONE |
+| 2.9 | Update Tasks | ✅ Exists | ✅ `TaskManager.jsx` | MEDIUM | ✅ DONE |
+| 2.10 | Monitor Student Progress | ✅ Added endpoint | ✅ `StudentProgress.jsx` | MEDIUM | ✅ DONE |
 
-### Backend Tasks
+### Backend Tasks - COMPLETED
 
-| Task | File | Description |
-|------|------|-------------|
-| File Replace Endpoint | `DocumentController.java` | `PUT /api/documents/{id}/replace` - Replace uploaded file |
-| All Submissions Endpoint | `DocumentController.java` | `GET /api/documents/all-submissions` - Professor views all student docs |
-| Override Score Endpoint | `DocumentController.java` | `PUT /api/documents/{id}/override-score` - Direct score modification |
-| Student Progress Endpoint | `ReportingController.java` | `GET /api/reports/student-progress/{studentId}` - Task completion stats |
+| Task | File | Description | Status |
+|------|------|-------------|--------|
+| File Replace Endpoint | `DocumentController.java` | `PUT /api/documents/{id}/replace` | ✅ DONE |
+| All Submissions Endpoint | `DocumentController.java` | `GET /api/documents/all-submissions` | ✅ DONE |
+| Override Score Endpoint | `DocumentController.java` | `PUT /api/documents/{id}/override-score` | ✅ DONE |
+| Student Progress Endpoint | `ReportingController.java` | `GET /api/reports/student-progress/{studentId}` | ✅ DONE |
 
 ### Backend Code Examples
 
@@ -155,35 +175,33 @@ public ResponseEntity<?> getAllSubmissions(
 }
 ```
 
-### Frontend Tasks
+### Frontend Tasks - COMPLETED
 
 #### Design System Setup
-- [ ] Update `tailwind.config.js` with color palette (violet primary, dark theme)
-- [ ] Add Inter font to `index.html`
-- [ ] Create animation keyframes in `index.css` (fadeIn, slideIn, pulse)
-- [ ] Build reusable components: `Button.jsx`, `Card.jsx`, `Badge.jsx`, `Modal.jsx`, `FileDropzone.jsx`
+- [x] Update `tailwind.config.js` with color palette (violet primary)
+- [x] Reusable components built into dashboard folder
 
-#### Student Dashboard Components
-- [ ] `DocumentUpload.jsx` - Drag-drop file upload with progress bar
-- [ ] `DocumentList.jsx` - Table/grid of uploaded documents with status badges
-- [ ] `EvaluationResults.jsx` - Score gauge, section breakdown, recommendations
-- [ ] `TaskTracker.jsx` - Timeline view of assigned tasks with completion status
+#### Student Dashboard Components - COMPLETED
+- [x] `DocumentUpload.jsx` - Drag-drop file upload with progress bar
+- [x] `DocumentList.jsx` - Table/grid of uploaded documents with status badges
+- [x] `EvaluationResults.jsx` - Score gauge, section breakdown, recommendations
+- [x] `TaskTracker.jsx` - Timeline view of assigned tasks with completion status
 
-#### Professor Dashboard Components
-- [ ] `SubmissionTracker.jsx` - Filterable table of all student submissions
-- [ ] `TaskManager.jsx` - Create/edit/delete task forms
-- [ ] `ScoreOverride.jsx` - Modal for direct score modification
-- [ ] `StudentProgress.jsx` - Progress bars and analytics for student performance
+#### Professor Dashboard Components - COMPLETED
+- [x] `SubmissionTracker.jsx` - Filterable table of all student submissions
+- [x] `TaskManager.jsx` - Create/edit/delete task forms
+- [x] `ScoreOverride.jsx` - Modal for direct score modification
+- [x] `StudentProgress.jsx` - Progress bars and analytics for student performance
 
-#### API Service Updates
-- [ ] Extend `apiService.js` with `documentAPI` (upload, list, evaluate, replace, delete)
-- [ ] Add `taskAPI` (create, getMyTasks, update, complete, delete)
-- [ ] Add `reportAPI` (getStatistics, getStudentPerformance, getTrends)
+#### API Service Updates - COMPLETED
+- [x] Extend `apiService.js` with `documentAPI` (upload, list, evaluate, replace, delete)
+- [x] Add `taskAPI` (create, getMyTasks, update, complete, delete)
+- [x] Add `reportAPI` (getStatistics, getStudentPerformance, getTrends)
 
-#### Dashboard Integration
-- [ ] Update `Dashboard.jsx` to render role-specific components
-- [ ] Add loading states, error handling, toast notifications
-- [ ] Implement responsive design for mobile/tablet
+#### Dashboard Integration - COMPLETED
+- [x] Update `Dashboard.jsx` to render role-specific components
+- [x] Add loading states, error handling, toast notifications
+- [x] Implement responsive design for mobile/tablet
 
 ### OpenRouter AI Integration (Local Branch Only)
 
@@ -200,16 +218,16 @@ openrouter.model=mistralai/mistral-7b-instruct:free
 - [ ] Refactor `ComplianceEvaluationService` to use AI for section detection
 - [ ] Add semantic analysis for content quality (not just keyword matching)
 
-### Checklist
-- [ ] API service covers documents (upload/list/evaluate/replace/delete), tasks (CRUD), reports (stats/progress)
-- [ ] Student dashboard: upload (drag-drop), list with status, evaluate action, delete, view feedback
-- [ ] Professor dashboard: submission tracker table with filters, task create/update/delete, score override modal
-- [ ] File replace endpoint wired on backend and used in UI
-- [ ] Progress/analytics cards for student progress (per SRS Module 2.10)
-- [ ] Role-guarded routes/components; unauthorized access blocked in UI and via API
-- [ ] Error/loading/toast states for all async flows
-- [ ] Responsive layout and accessibility checks for key flows
-- [ ] Integration tests (happy path upload→evaluate; professor override flow)
+### Checklist - COMPLETED
+- [x] API service covers documents (upload/list/evaluate/replace/delete), tasks (CRUD), reports (stats/progress)
+- [x] Student dashboard: upload (drag-drop), list with status, evaluate action, delete, view feedback
+- [x] Professor dashboard: submission tracker table with filters, task create/update/delete, score override modal
+- [x] File replace endpoint wired on backend and used in UI
+- [x] Progress/analytics cards for student progress (per SRS Module 2.10)
+- [x] Role-guarded routes/components; unauthorized access blocked in UI and via API
+- [x] Error/loading/toast states for all async flows
+- [x] Responsive layout and accessibility checks for key flows
+- [ ] Integration tests (happy path upload→evaluate; professor override flow) - PENDING LOCAL TEST
 
 ---
 
@@ -217,6 +235,24 @@ openrouter.model=mistralai/mistral-7b-instruct:free
 **Branch:** `feature/Laborada`  
 **Assigned To:** Laborada, John Joseph  
 **Status:** ✅ Partially Complete
+
+### Use Cases (3.1 - 3.6)
+
+#### Document Parsing (3.1 - 3.3)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 3.1 | PDF Text Extraction | ✅ `DocumentParser.java` | N/A | HIGH | ✅ DONE |
+| 3.2 | DOCX Text Extraction | ✅ `DocumentParser.java` | N/A | HIGH | ✅ DONE |
+| 3.3 | Error Handling for Corrupt Files | ⬜ TODO | ⬜ Toast message | HIGH | 🔴 TODO |
+
+#### Section Detection (3.4 - 3.6)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 3.4 | Keyword-Based Section Detection | ✅ `IEEE1058StandardConstants.java` | N/A | HIGH | ✅ DONE |
+| 3.5 | AI-Powered Section Detection | ⬜ `OpenRouterEvaluationService.java` | N/A | HIGH | 🔴 TODO |
+| 3.6 | Metadata Extraction (author, date) | ⬜ TODO | ⬜ Display in UI | LOW | 🔴 TODO |
 
 ### Current Implementation
 - ✅ PDF text extraction using Apache PDFBox
@@ -283,6 +319,26 @@ public class OpenRouterEvaluationService {
 **Branch:** `feature/Pepito`  
 **Assigned To:** Pepito, John Patrick  
 **Status:** ✅ Partially Complete
+
+### Use Cases (4.1 - 4.8)
+
+#### Scoring System (4.1 - 4.4)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 4.1 | Calculate Overall Compliance Score | ✅ `ComplianceEvaluationService.java` | ✅ `EvaluationResults.jsx` | HIGH | ✅ DONE |
+| 4.2 | Section-by-Section Scoring | ✅ `SectionAnalysis.java` | ✅ `EvaluationResults.jsx` | HIGH | ✅ DONE |
+| 4.3 | Configurable Scoring Weights | ⬜ `application.properties` | ⬜ Admin settings | HIGH | 🔴 TODO |
+| 4.4 | Score History Tracking | ⬜ `ComplianceScoreHistory.java` | ⬜ History view | LOW | 🔴 TODO |
+
+#### Feedback Generation (4.5 - 4.8)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 4.5 | Basic Feedback (missing sections) | ✅ `ComplianceEvaluationService.java` | ✅ `EvaluationResults.jsx` | HIGH | ✅ DONE |
+| 4.6 | Enhanced Detailed Feedback | ⬜ TODO | ⬜ Expanded recommendations | HIGH | 🔴 TODO |
+| 4.7 | Re-evaluation of Documents | ⬜ `SPMPDocumentService.java` | ⬜ Re-evaluate button | MEDIUM | 🔴 TODO |
+| 4.8 | Export Reports (PDF/Excel) | ⬜ `ReportExportService.java` | ⬜ Export button | LOW | 🔴 TODO |
 
 ### Current Implementation
 - ✅ Scoring formula with structure (30%) + completeness (70%) weights
@@ -393,6 +449,33 @@ public ResponseEntity<?> overrideScore(
 **Branch:** `feature/Verano`  
 **Assigned To:** Verano, Joel  
 **Status:** 🔴 Not Started
+
+### Use Cases (NFR 5.1 - 5.10)
+
+#### Performance (5.1 - 5.3)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 5.1 | API Response <3s | ⬜ Performance profiling | N/A | HIGH | 🔴 TODO |
+| 5.2 | Load Testing (JMeter/Gatling) | ⬜ Test scripts | N/A | MEDIUM | 🔴 TODO |
+| 5.3 | Database Query Optimization | ⬜ Indexing, caching | N/A | MEDIUM | 🔴 TODO |
+
+#### Security (5.4 - 5.6)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 5.4 | Input Validation & Sanitization | ⬜ DTO validation annotations | ⬜ Form validation | HIGH | 🔴 TODO |
+| 5.5 | Rate Limiting (Bucket4j) | ⬜ `RateLimitingInterceptor.java` | N/A | HIGH | 🔴 TODO |
+| 5.6 | Security Headers (CSP, XSS) | ⬜ `SecurityConfig.java` | N/A | HIGH | 🔴 TODO |
+
+#### Monitoring & Docs (5.7 - 5.10)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 5.7 | Structured Logging (SLF4J) | ⬜ All service classes | N/A | HIGH | 🔴 TODO |
+| 5.8 | Health Checks (Actuator) | ⬜ `application.properties` | N/A | MEDIUM | 🔴 TODO |
+| 5.9 | Swagger/OpenAPI Docs | ⬜ `springdoc-openapi` dependency | N/A | MEDIUM | 🔴 TODO |
+| 5.10 | Global Exception Handler | ⬜ `GlobalExceptionHandler.java` | ⬜ Error toast | HIGH | 🔴 TODO |
 
 ### Tasks Overview
 

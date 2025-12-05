@@ -3,9 +3,11 @@ package com.team02.spmpevaluator.controller;
 import com.team02.spmpevaluator.entity.ComplianceScore;
 import com.team02.spmpevaluator.entity.Role;
 import com.team02.spmpevaluator.entity.SPMPDocument;
+import com.team02.spmpevaluator.entity.Task;
 import com.team02.spmpevaluator.entity.User;
 import com.team02.spmpevaluator.repository.ComplianceScoreRepository;
 import com.team02.spmpevaluator.repository.SPMPDocumentRepository;
+import com.team02.spmpevaluator.service.TaskService;
 import com.team02.spmpevaluator.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,6 +33,7 @@ public class ReportingController {
     private final ComplianceScoreRepository complianceScoreRepository;
     private final SPMPDocumentRepository documentRepository;
     private final UserService userService;
+    private final TaskService taskService;
 
     /**
      * Get compliance statistics for all evaluated documents.
@@ -109,6 +112,80 @@ public class ReportingController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Failed to retrieve student performance: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Get comprehensive student progress (Use Case 2.10 - Monitor Student Progress).
+     * Includes task completion stats and document evaluation progress.
+     */
+    @GetMapping("/student-progress/{userId}")
+    public ResponseEntity<?> getStudentProgress(@PathVariable Long userId) {
+        try {
+            String username = getAuthenticatedUsername();
+            User currentUser = userService.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            // Only professors and PMs can access, OR student can view their own progress
+            if (currentUser.getRole() == Role.STUDENT && !currentUser.getId().equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("You can only view your own progress");
+            }
+
+            User student = userService.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("Student not found"));
+
+            // Get documents
+            List<SPMPDocument> studentDocs = documentRepository.findByUploadedBy_Id(userId);
+
+            // Get tasks
+            List<Task> studentTasks = taskService.getTasksByAssignedUser(userId);
+
+            Map<String, Object> progress = new HashMap<>();
+            progress.put("studentId", userId);
+            progress.put("studentName", student.getFirstName() + " " + student.getLastName());
+
+            // Document stats
+            Map<String, Object> documentStats = new HashMap<>();
+            documentStats.put("totalUploads", studentDocs.size());
+            documentStats.put("evaluated", studentDocs.stream().filter(SPMPDocument::isEvaluated).count());
+            documentStats.put("pending", studentDocs.stream().filter(d -> !d.isEvaluated()).count());
+
+            double avgScore = studentDocs.stream()
+                    .filter(SPMPDocument::isEvaluated)
+                    .filter(doc -> doc.getComplianceScore() != null)
+                    .mapToDouble(doc -> doc.getComplianceScore().getOverallScore())
+                    .average()
+                    .orElse(0.0);
+            documentStats.put("averageScore", String.format("%.2f", avgScore));
+
+            long compliantDocs = studentDocs.stream()
+                    .filter(SPMPDocument::isEvaluated)
+                    .filter(doc -> doc.getComplianceScore() != null && doc.getComplianceScore().isCompliant())
+                    .count();
+            documentStats.put("compliantDocuments", compliantDocs);
+
+            progress.put("documents", documentStats);
+
+            // Task stats
+            Map<String, Object> taskStats = new HashMap<>();
+            taskStats.put("totalTasks", studentTasks.size());
+            taskStats.put("completed", studentTasks.stream().filter(Task::isCompleted).count());
+            taskStats.put("pending", studentTasks.stream().filter(t -> !t.isCompleted()).count());
+            taskStats.put("overdue", studentTasks.stream()
+                    .filter(t -> !t.isCompleted() && t.getDeadline() != null && t.getDeadline().isBefore(java.time.LocalDate.now()))
+                    .count());
+
+            double completionRate = studentTasks.isEmpty() ? 0 :
+                    (studentTasks.stream().filter(Task::isCompleted).count() / (double) studentTasks.size()) * 100;
+            taskStats.put("completionRate", String.format("%.2f%%", completionRate));
+
+            progress.put("tasks", taskStats);
+
+            return ResponseEntity.ok(progress);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to retrieve student progress: " + e.getMessage());
         }
     }
 
