@@ -48,6 +48,10 @@ Thumbs.db
 # Documentation (except README.md)
 docs/
 wiki/
+
+# Allow Capstone Files to be tracked
+!Capstone Files/
+!Capstone Files/*
 *.md
 !README.md
 documentation/
