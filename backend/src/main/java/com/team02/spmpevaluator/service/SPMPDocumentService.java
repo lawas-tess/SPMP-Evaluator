@@ -1,7 +1,9 @@
 package com.team02.spmpevaluator.service;
 
+import com.team02.spmpevaluator.entity.ComplianceScore;
 import com.team02.spmpevaluator.entity.SPMPDocument;
 import com.team02.spmpevaluator.entity.User;
+import com.team02.spmpevaluator.repository.ComplianceScoreRepository;
 import com.team02.spmpevaluator.repository.SPMPDocumentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +28,7 @@ import java.util.UUID;
 public class SPMPDocumentService {
 
     private final SPMPDocumentRepository repository;
+    private final ComplianceScoreRepository complianceScoreRepository;
     private static final String UPLOAD_DIR = "uploads/documents/";
     private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
@@ -171,5 +175,105 @@ public class SPMPDocumentService {
             return "DOCX";
         }
         return "UNKNOWN";
+    }
+
+    /**
+     * Replace an existing document (Use Case 2.2 - File Edit).
+     * Deletes old file and uploads new one while preserving document ID.
+     */
+    public SPMPDocument replaceDocument(Long documentId, MultipartFile file, User user) throws IOException {
+        SPMPDocument existingDoc = repository.findById(documentId)
+                .orElseThrow(() -> new IllegalArgumentException("Document not found"));
+
+        // Validate file
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File cannot be empty");
+        }
+
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new IllegalArgumentException("File size exceeds maximum allowed size of 50MB");
+        }
+
+        String originalFileName = file.getOriginalFilename();
+        if (originalFileName == null || (!originalFileName.endsWith(".pdf") && !originalFileName.endsWith(".docx"))) {
+            throw new IllegalArgumentException("Only PDF and DOCX files are supported");
+        }
+
+        // Delete old file
+        Files.deleteIfExists(Paths.get(existingDoc.getFileUrl()));
+
+        // Generate unique filename for new file
+        String fileName = UUID.randomUUID() + "_" + originalFileName;
+        Path uploadPath = Paths.get(UPLOAD_DIR);
+
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+        }
+
+        // Save new file
+        Path filePath = uploadPath.resolve(fileName);
+        Files.write(filePath, file.getBytes());
+
+        // Update document entity
+        existingDoc.setFileName(originalFileName);
+        existingDoc.setFileUrl(filePath.toString());
+        existingDoc.setFileSize(file.getSize());
+        existingDoc.setFileType(getFileType(originalFileName));
+        existingDoc.setUpdatedAt(LocalDateTime.now());
+        existingDoc.setEvaluated(false); // Reset evaluation status
+        existingDoc.setFeedback(null);
+        existingDoc.setComplianceScore(null); // Clear previous score
+
+        return repository.save(existingDoc);
+    }
+
+    /**
+     * Get all submissions with optional filters (Use Case 2.7 - Submission Tracker).
+     * Professors can view all student submissions.
+     */
+    public List<SPMPDocument> getAllSubmissions(String status, Long studentId) {
+        List<SPMPDocument> allDocs = repository.findAll();
+
+        return allDocs.stream()
+                .filter(doc -> {
+                    // Filter by status if provided
+                    if (status != null && !status.isEmpty()) {
+                        if (status.equalsIgnoreCase("evaluated") && !doc.isEvaluated()) {
+                            return false;
+                        }
+                        if (status.equalsIgnoreCase("pending") && doc.isEvaluated()) {
+                            return false;
+                        }
+                    }
+                    // Filter by student if provided
+                    if (studentId != null && !doc.getUploadedBy().getId().equals(studentId)) {
+                        return false;
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Override document evaluation score (Use Case 2.8 - Override AI Results).
+     * Professors can review AI-generated evaluations and override if necessary.
+     */
+    public SPMPDocument overrideScore(Long documentId, Double newScore, String notes, User professor) {
+        SPMPDocument document = repository.findById(documentId)
+                .orElseThrow(() -> new IllegalArgumentException("Document not found"));
+
+        if (!document.isEvaluated() || document.getComplianceScore() == null) {
+            throw new IllegalArgumentException("Document has not been evaluated yet");
+        }
+
+        ComplianceScore complianceScore = document.getComplianceScore();
+        complianceScore.setProfessorOverride(newScore);
+        complianceScore.setProfessorNotes(notes);
+        complianceScore.setReviewedBy(professor);
+        complianceScore.setReviewedAt(LocalDateTime.now());
+
+        complianceScoreRepository.save(complianceScore);
+
+        return document;
     }
 }

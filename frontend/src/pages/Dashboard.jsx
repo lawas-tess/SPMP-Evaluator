@@ -1,291 +1,371 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import Navbar from '../components/Navbar.jsx';
-import { FaFileUpload, FaChartBar, FaCheckCircle, FaTasks, FaArrowRight } from 'react-icons/fa';
+import { 
+  FaFileUpload, FaChartBar, FaTasks, FaUsers, FaEye,
+  FaHome, FaClipboardList, FaUserGraduate
+} from 'react-icons/fa';
+
+// Import Dashboard Components
+import {
+  DocumentUpload,
+  DocumentList,
+  EvaluationResults,
+  TaskTracker,
+  SubmissionTracker,
+  TaskManager,
+  ScoreOverride,
+  StudentProgress
+} from '../components/dashboard';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const [activeSection, setActiveSection] = useState('overview');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // Modal states
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [showReport, setShowReport] = useState(false);
+  const [showScoreOverride, setShowScoreOverride] = useState(false);
+  const [showStudentProgress, setShowStudentProgress] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState(null);
 
-  const workflowSteps = [
-    {
-      id: 1,
-      title: 'Upload SPMP Document',
-      description: 'Upload your Software Project Management Plan (PDF or DOCX)',
-      icon: FaFileUpload,
-      details: 'Supported formats: PDF, DOCX. Maximum file size: 50MB. The system will extract and analyze the document content.'
-    },
-    {
-      id: 2,
-      title: 'Document Analysis',
-      description: 'Our AI-powered system analyzes your document against IEEE 1058 standards',
-      icon: FaCheckCircle,
-      details: 'The system evaluates compliance across 10 major sections: Scope, Standards References, Definitions, Project Overview, Project Organization, Managerial Process, Technical Process, Work Packages, Schedule, and Risk Management.'
-    },
-    {
-      id: 3,
-      title: 'Compliance Scoring',
-      description: 'Receive detailed compliance scores and recommendations',
-      icon: FaChartBar,
-      details: 'Get section-by-section compliance scores, identify missing elements, and receive actionable recommendations for improvement.'
-    },
-    {
-      id: 4,
-      title: 'Task Management',
-      description: 'Track improvements and assign tasks to team members',
-      icon: FaTasks,
-      details: 'Create action items based on recommendations, assign tasks to team members, and track progress towards full compliance.'
-    }
+  const isStudent = user?.role === 'STUDENT';
+  const isProfessor = user?.role === 'PROFESSOR' || user?.role === 'PROJECT_MANAGER';
+
+  const triggerRefresh = useCallback(() => {
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
+
+  // Student Navigation Tabs
+  const studentTabs = [
+    { id: 'overview', label: 'Overview', icon: FaHome },
+    { id: 'upload', label: 'Upload Document', icon: FaFileUpload },
+    { id: 'documents', label: 'My Documents', icon: FaClipboardList },
+    { id: 'tasks', label: 'My Tasks', icon: FaTasks },
   ];
 
-  const features = [
-    {
-      title: 'IEEE 1058 Compliance',
-      description: 'Evaluate compliance against the IEEE Standard for Software Project Management Plans',
-      icon: '✓'
-    },
-    {
-      title: 'Detailed Analysis',
-      description: 'Get comprehensive section-by-section analysis with specific recommendations',
-      icon: '📊'
-    },
-    {
-      title: 'Multi-User Collaboration',
-      description: 'Share documents and collaborate with team members across different roles',
-      icon: '👥'
-    },
-    {
-      title: 'Progress Tracking',
-      description: 'Monitor improvement progress and track task completion',
-      icon: '📈'
-    },
-    {
-      title: 'Document Management',
-      description: 'Manage multiple SPMP documents and maintain version history',
-      icon: '📁'
-    },
-    {
-      title: 'Comprehensive Reports',
-      description: 'Generate detailed reports for stakeholders and documentation',
-      icon: '📄'
-    }
+  // Professor Navigation Tabs
+  const professorTabs = [
+    { id: 'overview', label: 'Overview', icon: FaHome },
+    { id: 'submissions', label: 'Submissions', icon: FaClipboardList },
+    { id: 'tasks', label: 'Task Manager', icon: FaTasks },
+    { id: 'progress', label: 'Student Progress', icon: FaUserGraduate },
   ];
 
-  const roles = [
-    {
-      title: 'Student',
-      responsibilities: ['Upload SPMP documents', 'Review feedback', 'Make improvements', 'Track progress']
-    },
-    {
-      title: 'Professor',
-      responsibilities: ['Review submissions', 'Provide feedback', 'Track student progress', 'Generate reports']
-    },
-    {
-      title: 'Project Manager',
-      responsibilities: ['Manage projects', 'Assign tasks', 'Monitor timelines', 'Ensure compliance']
+  const tabs = isProfessor ? professorTabs : studentTabs;
+
+  // Handler for viewing evaluation report
+  const handleViewReport = (document) => {
+    setSelectedDocument(document);
+    setShowReport(true);
+  };
+
+  // Handler for replacing document
+  const handleReplaceDocument = (document) => {
+    setSelectedDocument(document);
+    setActiveTab('upload');
+  };
+
+  // Handler for score override
+  const handleOverrideScore = (document) => {
+    setSelectedDocument(document);
+    setShowScoreOverride(true);
+  };
+
+  // Handler for viewing student progress
+  const handleViewStudentProgress = (userId) => {
+    setSelectedStudentId(userId);
+    setShowStudentProgress(true);
+  };
+
+  // Render Overview Stats
+  const renderOverview = () => (
+    <div className="space-y-6">
+      {/* Welcome Section */}
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-lg p-8 text-white">
+        <h2 className="text-3xl font-bold mb-2">
+          Welcome back, {user?.name || 'User'}!
+        </h2>
+        <p className="text-purple-100 text-lg">
+          {isStudent 
+            ? 'Upload and manage your SPMP documents for IEEE 1058 compliance evaluation.'
+            : 'Review student submissions, manage tasks, and monitor progress.'}
+        </p>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-600">
+          <div className="flex items-center gap-3">
+            <FaFileUpload className="text-purple-600 text-2xl" />
+            <div>
+              <p className="text-gray-600 text-sm">Documents</p>
+              <p className="text-2xl font-bold text-purple-600">--</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-600">
+          <div className="flex items-center gap-3">
+            <FaChartBar className="text-green-600 text-2xl" />
+            <div>
+              <p className="text-gray-600 text-sm">Evaluated</p>
+              <p className="text-2xl font-bold text-green-600">--</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-600">
+          <div className="flex items-center gap-3">
+            <FaTasks className="text-blue-600 text-2xl" />
+            <div>
+              <p className="text-gray-600 text-sm">Tasks</p>
+              <p className="text-2xl font-bold text-blue-600">--</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6 border-l-4 border-orange-600">
+          <div className="flex items-center gap-3">
+            <FaEye className="text-orange-600 text-2xl" />
+            <div>
+              <p className="text-gray-600 text-sm">Avg. Score</p>
+              <p className="text-2xl font-bold text-orange-600">--</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {isStudent ? (
+            <>
+              <button
+                onClick={() => setActiveTab('upload')}
+                className="flex items-center gap-3 p-4 border-2 border-dashed border-purple-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition"
+              >
+                <FaFileUpload className="text-purple-600 text-xl" />
+                <div className="text-left">
+                  <p className="font-semibold text-gray-900">Upload Document</p>
+                  <p className="text-sm text-gray-500">Submit new SPMP for evaluation</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('documents')}
+                className="flex items-center gap-3 p-4 border-2 border-dashed border-blue-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition"
+              >
+                <FaClipboardList className="text-blue-600 text-xl" />
+                <div className="text-left">
+                  <p className="font-semibold text-gray-900">View Documents</p>
+                  <p className="text-sm text-gray-500">Check evaluation results</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('tasks')}
+                className="flex items-center gap-3 p-4 border-2 border-dashed border-green-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition"
+              >
+                <FaTasks className="text-green-600 text-xl" />
+                <div className="text-left">
+                  <p className="font-semibold text-gray-900">My Tasks</p>
+                  <p className="text-sm text-gray-500">View assigned tasks</p>
+                </div>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setActiveTab('submissions')}
+                className="flex items-center gap-3 p-4 border-2 border-dashed border-purple-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition"
+              >
+                <FaClipboardList className="text-purple-600 text-xl" />
+                <div className="text-left">
+                  <p className="font-semibold text-gray-900">View Submissions</p>
+                  <p className="text-sm text-gray-500">Review student documents</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('tasks')}
+                className="flex items-center gap-3 p-4 border-2 border-dashed border-blue-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition"
+              >
+                <FaTasks className="text-blue-600 text-xl" />
+                <div className="text-left">
+                  <p className="font-semibold text-gray-900">Manage Tasks</p>
+                  <p className="text-sm text-gray-500">Create and assign tasks</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('progress')}
+                className="flex items-center gap-3 p-4 border-2 border-dashed border-green-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition"
+              >
+                <FaUserGraduate className="text-green-600 text-xl" />
+                <div className="text-left">
+                  <p className="font-semibold text-gray-900">Student Progress</p>
+                  <p className="text-sm text-gray-500">Monitor performance</p>
+                </div>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* IEEE 1058 Info */}
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-4">IEEE 1058 Standard</h3>
+        <p className="text-gray-600 mb-4">
+          The system evaluates SPMP documents against the IEEE 1058 standard, covering the following sections:
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {[
+            'Scope', 'Standards References', 'Definitions', 'Project Overview',
+            'Project Organization', 'Managerial Process', 'Technical Process', 'Work Packages',
+            'Schedule', 'Risk Management', 'Closeout Plan', 'Annexes'
+          ].map((section, idx) => (
+            <div key={idx} className="flex items-center gap-2 p-2 bg-purple-50 rounded">
+              <span className="bg-purple-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                {idx + 1}
+              </span>
+              <span className="text-sm text-gray-700">{section}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render Content Based on Active Tab
+  const renderContent = () => {
+    // Show Report Modal
+    if (showReport && selectedDocument) {
+      return (
+        <EvaluationResults
+          document={selectedDocument}
+          onClose={() => {
+            setShowReport(false);
+            setSelectedDocument(null);
+          }}
+        />
+      );
     }
-  ];
+
+    // Show Student Progress Modal
+    if (showStudentProgress && selectedStudentId) {
+      return (
+        <StudentProgress
+          userId={selectedStudentId}
+          onClose={() => {
+            setShowStudentProgress(false);
+            setSelectedStudentId(null);
+          }}
+        />
+      );
+    }
+
+    switch (activeTab) {
+      case 'overview':
+        return renderOverview();
+      
+      // Student tabs
+      case 'upload':
+        return (
+          <DocumentUpload onUploadSuccess={triggerRefresh} />
+        );
+      
+      case 'documents':
+        return (
+          <DocumentList
+            onViewReport={handleViewReport}
+            onReplace={handleReplaceDocument}
+            refreshTrigger={refreshTrigger}
+          />
+        );
+      
+      case 'tasks':
+        return isStudent ? (
+          <TaskTracker refreshTrigger={refreshTrigger} />
+        ) : (
+          <TaskManager refreshTrigger={refreshTrigger} />
+        );
+      
+      // Professor tabs
+      case 'submissions':
+        return (
+          <SubmissionTracker
+            onViewReport={handleViewReport}
+            onOverrideScore={handleOverrideScore}
+            refreshTrigger={refreshTrigger}
+          />
+        );
+      
+      case 'progress':
+        return (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <FaUserGraduate className="text-purple-600" /> Student Progress
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Select a student from the Submissions tab to view their detailed progress.
+            </p>
+            <button
+              onClick={() => setActiveTab('submissions')}
+              className="text-purple-600 hover:text-purple-700 font-semibold"
+            >
+              Go to Submissions →
+            </button>
+          </div>
+        );
+
+      default:
+        return renderOverview();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
       <Navbar />
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        {/* Header Section */}
-        <div className="mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">Welcome to SPMP Evaluator</h2>
-          <p className="text-lg text-gray-600">
-            Your comprehensive platform for evaluating Software Project Management Plans against IEEE 1058 standards
-          </p>
-        </div>
-
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Navigation Tabs */}
-        <div className="flex gap-4 mb-8 flex-wrap">
-          {['overview', 'workflow', 'features', 'roles'].map((section) => (
-            <button
-              key={section}
-              onClick={() => setActiveSection(section)}
-              className={`px-6 py-2 rounded-lg font-semibold transition ${
-                activeSection === section
-                  ? 'bg-purple-600 text-white shadow-lg'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-600'
-              }`}
-            >
-              {section.charAt(0).toUpperCase() + section.slice(1)}
-            </button>
-          ))}
+        <div className="mb-6">
+          <div className="flex gap-2 flex-wrap bg-white rounded-lg shadow p-2">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setShowReport(false);
+                    setShowStudentProgress(false);
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition ${
+                    activeTab === tab.id
+                      ? 'bg-purple-600 text-white shadow'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Overview Section */}
-        {activeSection === 'overview' && (
-          <div className="space-y-8">
-            <div className="bg-white rounded-lg shadow-lg p-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">How SPMP Evaluator Works</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                  <h4 className="text-lg font-semibold text-purple-600 mb-4">What is SPMP?</h4>
-                  <p className="text-gray-700 leading-relaxed mb-4">
-                    A Software Project Management Plan (SPMP) is a comprehensive document that defines how a software project will be managed from start to finish. It's required for all software projects and contains critical information about project scope, organization, resources, and processes.
-                  </p>
-                  <p className="text-gray-700 leading-relaxed">
-                    The IEEE 1058 standard provides a detailed framework for what a complete and professional SPMP should contain.
-                  </p>
-                </div>
-                <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
-                  <h4 className="text-lg font-semibold text-purple-600 mb-4">Why Evaluate?</h4>
-                  <ul className="space-y-3 text-gray-700">
-                    <li className="flex items-start gap-3">
-                      <span className="text-purple-600 font-bold">✓</span>
-                      <span>Ensure compliance with industry standards</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="text-purple-600 font-bold">✓</span>
-                      <span>Identify missing critical components</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="text-purple-600 font-bold">✓</span>
-                      <span>Improve project management quality</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="text-purple-600 font-bold">✓</span>
-                      <span>Receive actionable improvement recommendations</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-600">
-                <p className="text-gray-600 text-sm font-semibold">IEEE 1058 Sections</p>
-                <p className="text-3xl font-bold text-purple-600">10</p>
-              </div>
-              <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-600">
-                <p className="text-gray-600 text-sm font-semibold">Compliance Score</p>
-                <p className="text-3xl font-bold text-blue-600">0-100%</p>
-              </div>
-              <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-600">
-                <p className="text-gray-600 text-sm font-semibold">Analysis Areas</p>
-                <p className="text-3xl font-bold text-green-600">50+</p>
-              </div>
-              <div className="bg-white rounded-lg shadow p-6 border-l-4 border-orange-600">
-                <p className="text-gray-600 text-sm font-semibold">Max File Size</p>
-                <p className="text-3xl font-bold text-orange-600">50 MB</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Workflow Section */}
-        {activeSection === 'workflow' && (
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-8">4-Step Workflow</h3>
-            <div className="space-y-6">
-              {workflowSteps.map((step, index) => {
-                const Icon = step.icon;
-                return (
-                  <div key={step.id} className="flex gap-6">
-                    <div className="flex flex-col items-center">
-                      <div className="bg-purple-600 text-white rounded-full w-12 h-12 flex items-center justify-center font-bold text-lg">
-                        {step.id}
-                      </div>
-                      {index < workflowSteps.length - 1 && (
-                        <div className="w-1 h-16 bg-purple-200 mt-2"></div>
-                      )}
-                    </div>
-                    <div className="flex-1 pb-6">
-                      <div className="flex items-start gap-3 mb-3">
-                        <Icon className="text-purple-600 text-xl mt-1" />
-                        <h4 className="text-xl font-bold text-gray-900">{step.title}</h4>
-                      </div>
-                      <p className="text-gray-700 mb-3">{step.description}</p>
-                      <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm text-gray-700">
-                        {step.details}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Features Section */}
-        {activeSection === 'features' && (
-          <div className="space-y-8">
-            <h3 className="text-2xl font-bold text-gray-900">Key Features</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {features.map((feature, index) => (
-                <div key={index} className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition">
-                  <div className="text-4xl mb-3">{feature.icon}</div>
-                  <h4 className="text-lg font-bold text-gray-900 mb-2">{feature.title}</h4>
-                  <p className="text-gray-600">{feature.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Roles Section */}
-        {activeSection === 'roles' && (
-          <div className="space-y-8">
-            <h3 className="text-2xl font-bold text-gray-900">User Roles & Responsibilities</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {roles.map((role, index) => (
-                <div key={index} className="bg-white rounded-lg shadow-lg p-6">
-                  <h4 className="text-xl font-bold text-purple-600 mb-4">{role.title}</h4>
-                  <ul className="space-y-3">
-                    {role.responsibilities.map((resp, i) => (
-                      <li key={i} className="flex items-start gap-3 text-gray-700">
-                        <span className="text-purple-600 font-bold mt-1">→</span>
-                        <span>{resp}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-
-            {/* IEEE 1058 Sections */}
-            <div className="bg-white rounded-lg shadow-lg p-8 mt-8">
-              <h4 className="text-xl font-bold text-gray-900 mb-6">IEEE 1058 Standard Sections</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  'Scope',
-                  'Standards References',
-                  'Definitions',
-                  'Project Overview',
-                  'Project Organization',
-                  'Managerial Process',
-                  'Technical Process',
-                  'Work Packages',
-                  'Schedule',
-                  'Risk Management'
-                ].map((section, i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 bg-purple-50 rounded border border-purple-200">
-                    <span className="bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
-                      {i + 1}
-                    </span>
-                    <span className="font-semibold text-gray-900">{section}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Call to Action */}
-        <div className="mt-12 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-lg p-8 text-white text-center">
-          <h3 className="text-2xl font-bold mb-4">Ready to Get Started?</h3>
-          <p className="text-lg mb-6">Upload your SPMP document to begin comprehensive evaluation</p>
-          <button className="bg-white text-purple-600 px-8 py-3 rounded-lg font-bold hover:bg-gray-100 transition flex items-center justify-center gap-2 mx-auto">
-            Upload Document
-            <FaFileUpload />
-          </button>
-        </div>
+        {/* Main Content */}
+        {renderContent()}
       </div>
+
+      {/* Score Override Modal */}
+      {showScoreOverride && selectedDocument && (
+        <ScoreOverride
+          document={selectedDocument}
+          onClose={() => {
+            setShowScoreOverride(false);
+            setSelectedDocument(null);
+          }}
+          onSuccess={triggerRefresh}
+        />
+      )}
     </div>
   );
 };

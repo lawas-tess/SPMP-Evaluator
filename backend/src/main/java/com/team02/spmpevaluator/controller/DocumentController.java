@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Document upload and evaluation endpoints.
@@ -231,6 +232,109 @@ public class DocumentController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Failed to add notes: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Replace an existing document (Use Case 2.2 - File Edit).
+     * Students can update/replace previously uploaded files.
+     */
+    @PutMapping("/{documentId}/replace")
+    public ResponseEntity<?> replaceDocument(
+            @PathVariable Long documentId,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            String username = getAuthenticatedUsername();
+            User currentUser = userService.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            // Get existing document
+            SPMPDocument existingDoc = documentService.getDocumentById(documentId)
+                    .orElseThrow(() -> new IllegalArgumentException("Document not found"));
+
+            // Check ownership
+            if (!existingDoc.getUploadedBy().getId().equals(currentUser.getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("You can only replace your own documents");
+            }
+
+            // Replace document
+            SPMPDocument updatedDoc = documentService.replaceDocument(documentId, file, currentUser);
+
+            return ResponseEntity.ok(updatedDoc);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Replace failed: " + e.getMessage());
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to process file: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Replace error: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Get all student submissions (Use Case 2.7 - Submission Tracker).
+     * Professors can view all student submissions.
+     */
+    @GetMapping("/all-submissions")
+    public ResponseEntity<?> getAllSubmissions(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long studentId) {
+        try {
+            String username = getAuthenticatedUsername();
+            User currentUser = userService.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            // Only professors and PMs can view all submissions
+            if (currentUser.getRole() == Role.STUDENT) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("Only professors and project managers can view all submissions");
+            }
+
+            List<SPMPDocument> submissions = documentService.getAllSubmissions(status, studentId);
+
+            return ResponseEntity.ok(submissions);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to retrieve submissions: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Override document evaluation score (Use Case 2.8 - Override AI Results).
+     * Professors can review AI-generated evaluations and override if necessary.
+     */
+    @PutMapping("/{documentId}/override-score")
+    public ResponseEntity<?> overrideScore(
+            @PathVariable Long documentId,
+            @RequestBody Map<String, Object> overrideData) {
+        try {
+            String username = getAuthenticatedUsername();
+            User currentUser = userService.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            // Only professors and PMs can override scores
+            if (currentUser.getRole() == Role.STUDENT) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("Only professors and project managers can override scores");
+            }
+
+            Double newScore = Double.valueOf(overrideData.get("score").toString());
+            String notes = overrideData.get("notes") != null ? overrideData.get("notes").toString() : "";
+
+            if (newScore < 0 || newScore > 100) {
+                return ResponseEntity.badRequest().body("Score must be between 0 and 100");
+            }
+
+            SPMPDocument document = documentService.overrideScore(documentId, newScore, notes, currentUser);
+
+            return ResponseEntity.ok(document);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Override failed: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to override score: " + e.getMessage());
         }
     }
 
