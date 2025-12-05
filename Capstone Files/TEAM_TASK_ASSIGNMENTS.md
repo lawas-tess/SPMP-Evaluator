@@ -109,7 +109,7 @@ POST /api/auth/change-password
 ## Module 2: Role-Based User Interface Transactions
 **Branch:** `feature/Lapure`  
 **Assigned To:** Lapure, Jessie Noel  
-**Status:** ✅ FULLY IMPLEMENTED (December 5, 2025)
+**Status:** ✅ FULLY IMPLEMENTED 
 
 ### Use Cases (2.1 - 2.10)
 
@@ -133,7 +133,7 @@ POST /api/auth/change-password
 | 2.9 | Update Tasks | ✅ `TaskService.java` + Notifications | ✅ `TaskManager.jsx` | MEDIUM | ✅ DONE |
 | 2.10 | Monitor Student Progress | ✅ `ReportingController.java` + AuditLog | ✅ `StudentList.jsx` | MEDIUM | ✅ DONE |
 
-### NEW Backend Implementations (December 5, 2025)
+### NEW Backend Implementations 
 
 #### New Entities Created
 - [x] `GradingCriteria.java` - IEEE 1058 section weights for custom grading
@@ -162,7 +162,7 @@ POST /api/auth/change-password
 - [x] `TaskController.java` - Added AuditLogService for view task tracking
 - [x] `ReportingController.java` - Added AuditLogService for progress monitoring
 
-### NEW Frontend Implementations (December 5, 2025)
+### NEW Frontend Implementations 
 
 #### New Components Created
 - [x] `FileReplaceModal.jsx` - Drag-drop file replacement with version notes (UC 2.2)
@@ -250,7 +250,7 @@ POST /api/auth/change-password
 ## Module 3: Automated Parser Module
 **Branch:** `feature/Laborada`  
 **Assigned To:** Laborada, John Joseph  
-**Status:** ✅ Partially Complete
+**Status:** ❌ Not Implemented (Upload UI Only)
 
 ### Use Cases (3.1 - 3.6)
 
@@ -258,28 +258,58 @@ POST /api/auth/change-password
 
 | UC# | Use Case | Backend | Frontend | Priority | Status |
 |-----|----------|---------|----------|----------|--------|
-| 3.1 | PDF Text Extraction | ✅ `DocumentParser.java` | N/A | HIGH | ✅ DONE |
-| 3.2 | DOCX Text Extraction | ✅ `DocumentParser.java` | N/A | HIGH | ✅ DONE |
-| 3.3 | Error Handling for Corrupt Files | ⬜ TODO | ⬜ Toast message | HIGH | 🔴 TODO |
+| 3.1 | PDF Text Extraction | ❌ Not Started | N/A | HIGH | 🔴 TODO |
+| 3.2 | DOCX Text Extraction | ❌ Not Started | N/A | HIGH | 🔴 TODO |
+| 3.3 | Error Handling for Corrupt Files | ❌ Not Started | ⬜ Toast message | HIGH | 🔴 TODO |
 
 #### Section Detection (3.4 - 3.6)
 
 | UC# | Use Case | Backend | Frontend | Priority | Status |
 |-----|----------|---------|----------|----------|--------|
-| 3.4 | Keyword-Based Section Detection | ✅ `IEEE1058StandardConstants.java` | N/A | HIGH | ✅ DONE |
-| 3.5 | AI-Powered Section Detection | ⬜ `OpenRouterEvaluationService.java` | N/A | HIGH | 🔴 TODO |
-| 3.6 | Metadata Extraction (author, date) | ⬜ TODO | ⬜ Display in UI | LOW | 🔴 TODO |
+| 3.4 | Keyword-Based Section Detection | ❌ Not Started | N/A | HIGH | 🔴 TODO |
+| 3.5 | AI-Powered Section Detection | ❌ Not Started | N/A | HIGH | 🔴 TODO |
+| 3.6 | Metadata Extraction (author, date) | ❌ Not Started | ⬜ Display in UI | LOW | 🔴 TODO |
 
 ### Current Implementation
-- ✅ PDF text extraction using Apache PDFBox
-- ✅ DOCX text extraction using Apache POI
-- ✅ Keyword-based section detection for IEEE 1058
-- ✅ Integration with `ComplianceEvaluationService`
+- ✅ File upload UI works (from Module 2 UC 2.1)
+- ✅ Files are stored in database
+- ❌ No PDF/DOCX text extraction implemented
+- ❌ No IEEE 1058 section detection implemented
+- ❌ No AI-powered analysis implemented
+
+### What's Missing (Blocker for Module 4)
+
+| Component | Description | Required For |
+|-----------|-------------|--------------|
+| `DocumentParser.java` | PDF/DOCX text extraction service | UC 3.1, 3.2 |
+| `IEEE1058StandardConstants.java` | Section keywords and mappings | UC 3.4 |
+| `OpenRouterEvaluationService.java` | AI-based section detection | UC 3.5 |
+| `ComplianceEvaluationService.java` | Compliance scoring logic | UC 4.1 |
+
+### Dependencies Required
+```xml
+<!-- Apache PDFBox for PDF parsing -->
+<dependency>
+    <groupId>org.apache.pdfbox</groupId>
+    <artifactId>pdfbox</artifactId>
+    <version>2.0.29</version>
+</dependency>
+
+<!-- Apache POI for DOCX parsing -->
+<dependency>
+    <groupId>org.apache.poi</groupId>
+    <artifactId>poi-ooxml</artifactId>
+    <version>5.2.3</version>
+</dependency>
+```
 
 ### Remaining Tasks
 
 | Task | Priority | File(s) | Description |
 |------|----------|---------|-------------|
+| Create DocumentParser Service | HIGH | `DocumentParser.java` | PDF/DOCX text extraction using Apache PDFBox/POI |
+| Create IEEE 1058 Constants | HIGH | `IEEE1058StandardConstants.java` | Section keywords and structure definitions |
+| Implement Section Detection | HIGH | `SectionDetectionService.java` | Keyword-based section identification |
 | Enhanced Error Handling | HIGH | `DocumentParser.java` | Better error messages for corrupt/unsupported files |
 | Performance Optimization | MEDIUM | `DocumentParser.java` | Ensure extraction <10s for 50-page documents |
 | Security Hardening | HIGH | `DocumentParser.java`, `DocumentController.java` | Sanitize inputs, prevent XXE attacks, validate file types |
@@ -320,21 +350,23 @@ public class OpenRouterEvaluationService {
 - Generate more detailed, context-aware recommendations
 
 ### Checklist
-- [x] PDF and DOCX extraction verified with sample files (normal and edge cases)
-- [x] Keyword matching covers all IEEE 1058 sections per constants
+- [ ] PDF and DOCX extraction implemented with sample files
+- [ ] Keyword matching covers all IEEE 1058 sections per constants
 - [ ] Parser returns meaningful errors for corrupt/unsupported files
 - [ ] Performance: extraction <10s for 50-page doc
 - [ ] Unit tests for extraction and keyword detection pass
-- [x] Service integrates parser output into evaluation flow
+- [ ] Service integrates parser output into evaluation flow
 - [ ] Security: input sanitized; no temp file leaks
 - [ ] AI-powered section detection implemented (OpenRouter integration)
+
+> **⚠️ BLOCKER:** This module must be implemented before Module 4 (AI Scoring) can generate actual compliance scores. Currently only the upload UI (Module 2) is complete.
 
 ---
 
 ## Module 4: Generate Score & Feedback
 **Branch:** `feature/Pepito`  
 **Assigned To:** Pepito, John Patrick  
-**Status:** ✅ Partially Complete
+**Status:** 🔄 25% Complete (UC 4.2 Only)
 
 ### Use Cases (4.1 - 4.8)
 
@@ -342,37 +374,64 @@ public class OpenRouterEvaluationService {
 
 | UC# | Use Case | Backend | Frontend | Priority | Status |
 |-----|----------|---------|----------|----------|--------|
-| 4.1 | Calculate Overall Compliance Score | ✅ `ComplianceEvaluationService.java` | ✅ `EvaluationResults.jsx` | HIGH | ✅ DONE |
-| 4.2 | Section-by-Section Scoring | ✅ `SectionAnalysis.java` | ✅ `EvaluationResults.jsx` | HIGH | ✅ DONE |
-| 4.3 | Configurable Scoring Weights | ⬜ `application.properties` | ⬜ Admin settings | HIGH | 🔴 TODO |
+| 4.1 | Calculate Overall Compliance Score | ❌ Depends on Parser (Module 3) | ✅ `EvaluationResults.jsx` (UI ready) | HIGH | 🔴 BLOCKED |
+| 4.2 | Apply Custom Rubric (Grading Criteria) | ✅ `GradingCriteriaService.java` | ✅ `GradingCriteria.jsx` | HIGH | ✅ DONE |
+| 4.3 | Override AI Results | ✅ `SPMPDocumentService.java` | ✅ `ScoreOverride.jsx` | HIGH | 🟡 UI Ready (Needs AI scores) |
 | 4.4 | Score History Tracking | ⬜ `ComplianceScoreHistory.java` | ⬜ History view | LOW | 🔴 TODO |
 
 #### Feedback Generation (4.5 - 4.8)
 
 | UC# | Use Case | Backend | Frontend | Priority | Status |
 |-----|----------|---------|----------|----------|--------|
-| 4.5 | Basic Feedback (missing sections) | ✅ `ComplianceEvaluationService.java` | ✅ `EvaluationResults.jsx` | HIGH | ✅ DONE |
-| 4.6 | Enhanced Detailed Feedback | ⬜ TODO | ⬜ Expanded recommendations | HIGH | 🔴 TODO |
+| 4.5 | View Overall Score | ❌ Depends on Parser (Module 3) | ✅ `EvaluationResults.jsx` (UI ready) | HIGH | 🔴 BLOCKED |
+| 4.6 | Enhanced Detailed Feedback | ❌ Depends on Parser (Module 3) | ⬜ Expanded recommendations | HIGH | 🔴 BLOCKED |
 | 4.7 | Re-evaluation of Documents | ⬜ `SPMPDocumentService.java` | ⬜ Re-evaluate button | MEDIUM | 🔴 TODO |
 | 4.8 | Export Reports (PDF/Excel) | ⬜ `ReportExportService.java` | ⬜ Export button | LOW | 🔴 TODO |
 
 ### Current Implementation
-- ✅ Scoring formula with structure (30%) + completeness (70%) weights
-- ✅ Section-by-section analysis stored in `SectionAnalysis` entity
-- ✅ Compliance score calculation and persistence
-- ✅ Basic feedback generation for missing/present sections
-- ✅ API endpoints for retrieving scores and reports
+- ✅ **UC 4.2 Complete:** GradingCriteria entity, service, controller, and UI fully working
+  - Professors can create custom rubrics with IEEE 1058 section weights
+  - Weights must sum to 100%
+  - Can save and activate different criteria presets
+- ✅ **UC 4.3 UI Ready:** Score override modal exists but needs AI-generated scores to override
+- ✅ **UC 4.5 UI Ready:** EvaluationResults.jsx can display scores but needs AI to generate them
+- ❌ **UC 4.1 Blocked:** Cannot calculate scores without parsed document sections (Module 3)
+- ❌ **UC 4.6 Blocked:** Cannot generate feedback without compliance analysis
+
+### What's Actually Working
+
+| Component | Status | Description |
+|-----------|--------|-------------|
+| `GradingCriteria.java` | ✅ Complete | Entity with IEEE 1058 section weights |
+| `GradingCriteriaDTO.java` | ✅ Complete | Data transfer object |
+| `GradingCriteriaRepository.java` | ✅ Complete | CRUD + findByCreatedBy, findActive |
+| `GradingCriteriaService.java` | ✅ Complete | Weight validation, CRUD operations |
+| `GradingCriteriaController.java` | ✅ Complete | Full REST API |
+| `GradingCriteria.jsx` | ✅ Complete | UI with sliders and validation |
+| `ScoreOverride.jsx` | ✅ UI Ready | Modal exists, needs scores to override |
+| `EvaluationResults.jsx` | ✅ UI Ready | Display component, needs data |
+
+### What's Missing (Dependencies on Module 3)
+
+| Component | Required For | Blocker |
+|-----------|--------------|---------|
+| `ComplianceEvaluationService.java` | UC 4.1 | Needs parsed sections from Module 3 |
+| `SectionAnalysis.java` scoring logic | UC 4.5, 4.6 | Needs section content to analyze |
+| AI feedback generation | UC 4.6 | Needs compliance results |
 
 ### Remaining Tasks
 
 | Task | Priority | File(s) | Description |
 |------|----------|---------|-------------|
-| Configurable Weights | HIGH | `IEEE1058StandardConstants.java`, `application.properties` | Make structure/completeness weights configurable via properties |
-| Enhanced Feedback | HIGH | `ComplianceEvaluationService.java` | More detailed, actionable recommendations per section |
-| Score Override Support | HIGH | `DocumentController.java`, `ComplianceScore.java` | Allow professors to override scores with justification notes |
+| Implement Compliance Evaluation | HIGH | `ComplianceEvaluationService.java` | Score calculation based on parsed sections (blocked by Module 3) |
+| Section Analysis Logic | HIGH | `SectionAnalysis.java` | Per-section scoring with IEEE 1058 criteria |
+| Configurable Weights | MEDIUM | `application.properties` | Make structure/completeness weights configurable via properties |
+| Enhanced Feedback | MEDIUM | `ComplianceEvaluationService.java` | More detailed, actionable recommendations per section |
 | Re-evaluation Logic | MEDIUM | `SPMPDocumentService.java` | Handle re-evaluation of already evaluated documents |
 | Score History Tracking | LOW | Create `ComplianceScoreHistory.java` | Track score changes over time |
 | Export Reports | LOW | Create `ReportExportService.java` | Export compliance reports as PDF/Excel |
+
+> **⚠️ DEPENDENCY:** UC 4.1, 4.5, 4.6 are blocked until Module 3 (Parser) is implemented. UC 4.2 (Grading Criteria) is the only fully functional use case.
 
 ### Enhanced Feedback Examples
 
@@ -450,14 +509,17 @@ public ResponseEntity<?> overrideScore(
 ```
 
 ### Checklist
-- [x] Scoring formula implemented with configurable weights (structure/completeness)
-- [x] Section analyses persisted and retrievable via DTOs
+- [x] Grading criteria UI and backend complete (UC 4.2)
+- [x] Score override UI component created (UC 4.3 - needs AI scores)
+- [x] Evaluation results display component ready (UC 4.5 - needs AI scores)
+- [ ] Scoring formula implemented with configurable weights
+- [ ] Section analyses persisted and retrievable via DTOs
 - [ ] Feedback text clear and actionable for missing/present sections
-- [x] API returns overall score, per-section scores, compliance flag
+- [ ] API returns overall score, per-section scores, compliance flag
 - [ ] Thresholds (e.g., min compliance) configurable via properties
 - [ ] Unit/integration tests for scoring logic and API responses
 - [ ] Handles re-evaluation idempotently (updates existing scores)
-- [ ] Score override functionality with audit trail
+- [ ] ComplianceEvaluationService implemented (blocked by Module 3)
 
 ---
 
