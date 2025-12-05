@@ -4,10 +4,12 @@ import com.team02.spmpevaluator.dto.ComplianceReportDTO;
 import com.team02.spmpevaluator.entity.Role;
 import com.team02.spmpevaluator.entity.SPMPDocument;
 import com.team02.spmpevaluator.entity.User;
+import com.team02.spmpevaluator.service.AuditLogService;
 import com.team02.spmpevaluator.service.ComplianceEvaluationService;
 import com.team02.spmpevaluator.service.SPMPDocumentService;
 import com.team02.spmpevaluator.service.UserService;
 import com.team02.spmpevaluator.util.DocumentParser;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +36,7 @@ public class DocumentController {
     private final ComplianceEvaluationService evaluationService;
     private final DocumentParser documentParser;
     private final UserService userService;
+    private final AuditLogService auditLogService;
 
     /**
      * Upload an SPMP document.
@@ -142,10 +145,17 @@ public class DocumentController {
 
     /**
      * Get evaluation report for a document.
+     * UC 2.4: Student View Feedback
+     * Step 5: System tracks view activity
      */
     @GetMapping("/{documentId}/report")
-    public ResponseEntity<?> getEvaluationReport(@PathVariable Long documentId) {
+    public ResponseEntity<?> getEvaluationReport(@PathVariable Long documentId, HttpServletRequest request) {
         try {
+            // Get current user for logging
+            String username = getAuthenticatedUsername();
+            User currentUser = userService.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
             SPMPDocument document = documentService.getDocumentById(documentId)
                     .orElseThrow(() -> new IllegalArgumentException("Document not found"));
 
@@ -156,6 +166,10 @@ public class DocumentController {
             if (document.getComplianceScore() == null) {
                 return ResponseEntity.notFound().build();
             }
+
+            // UC 2.4 Step 5: System tracks view activity
+            String ipAddress = request.getRemoteAddr();
+            auditLogService.logFeedbackView(currentUser.getId(), documentId, ipAddress);
 
             ComplianceReportDTO report = evaluationService.convertToDTO(document.getComplianceScore());
             return ResponseEntity.ok(report);

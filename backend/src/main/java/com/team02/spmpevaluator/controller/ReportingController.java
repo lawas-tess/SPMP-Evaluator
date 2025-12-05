@@ -7,8 +7,10 @@ import com.team02.spmpevaluator.entity.Task;
 import com.team02.spmpevaluator.entity.User;
 import com.team02.spmpevaluator.repository.ComplianceScoreRepository;
 import com.team02.spmpevaluator.repository.SPMPDocumentRepository;
+import com.team02.spmpevaluator.service.AuditLogService;
 import com.team02.spmpevaluator.service.TaskService;
 import com.team02.spmpevaluator.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +36,7 @@ public class ReportingController {
     private final SPMPDocumentRepository documentRepository;
     private final UserService userService;
     private final TaskService taskService;
+    private final AuditLogService auditLogService;
 
     /**
      * Get compliance statistics for all evaluated documents.
@@ -118,9 +121,10 @@ public class ReportingController {
     /**
      * Get comprehensive student progress (Use Case 2.10 - Monitor Student Progress).
      * Includes task completion stats and document evaluation progress.
+     * Step 5: System logs viewing activity.
      */
     @GetMapping("/student-progress/{userId}")
-    public ResponseEntity<?> getStudentProgress(@PathVariable Long userId) {
+    public ResponseEntity<?> getStudentProgress(@PathVariable Long userId, HttpServletRequest request) {
         try {
             String username = getAuthenticatedUsername();
             User currentUser = userService.findByUsername(username)
@@ -134,6 +138,12 @@ public class ReportingController {
 
             User student = userService.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("Student not found"));
+
+            // UC 2.10 Step 5: System logs viewing activity
+            if (currentUser.getRole() == Role.PROFESSOR) {
+                String ipAddress = request.getRemoteAddr();
+                auditLogService.logStudentProgressView(currentUser.getId(), userId, ipAddress);
+            }
 
             // Get documents
             List<SPMPDocument> studentDocs = documentRepository.findByUploadedBy_Id(userId);

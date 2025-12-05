@@ -46,7 +46,7 @@ public class AuditLog {
     }
 
     public enum ActionType {
-        LOGIN, LOGOUT, UPLOAD, DOWNLOAD, EVALUATE, OVERRIDE, CREATE, UPDATE, DELETE
+        LOGIN, LOGOUT, UPLOAD, DOWNLOAD, VIEW, EVALUATE, OVERRIDE, CREATE, UPDATE, DELETE
     }
 
     public enum ResourceType {
