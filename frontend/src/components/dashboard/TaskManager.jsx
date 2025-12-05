@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FaTasks, FaPlus, FaSpinner, FaEdit, FaTrash, FaSync,
-  FaExclamationTriangle, FaCheck, FaClock, FaUser
+  FaExclamationTriangle, FaCheck, FaClock, FaUser, FaTimes
 } from 'react-icons/fa';
-import { taskAPI } from '../../services/apiService';
+import { taskAPI, userAPI } from '../../services/apiService';
 
 const TaskManager = ({ refreshTrigger }) => {
   const [tasks, setTasks] = useState([]);
@@ -207,7 +207,7 @@ const TaskManager = ({ refreshTrigger }) => {
   );
 };
 
-// Task Form Modal Component
+// Task Form Modal Component with Student Selector (UC 2.6)
 const TaskFormModal = ({ task, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     title: task?.title || '',
@@ -216,8 +216,26 @@ const TaskFormModal = ({ task, onClose, onSuccess }) => {
     dueDate: task?.dueDate ? task.dueDate.split('T')[0] : '',
     assignedToId: task?.assignedTo?.id || ''
   });
+  const [students, setStudents] = useState([]);
+  const [loadingStudents, setLoadingStudents] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  // UC 2.6 Step 4: Load students for selection
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const response = await userAPI.getAllStudents();
+        setStudents(response.data || []);
+      } catch (err) {
+        console.error('Failed to load students:', err);
+        setStudents([]);
+      } finally {
+        setLoadingStudents(false);
+      }
+    };
+    fetchStudents();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -312,6 +330,35 @@ const TaskFormModal = ({ task, onClose, onSuccess }) => {
               onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
             />
+          </div>
+
+          {/* UC 2.6 Step 4: Student Selector (Assign To) */}
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Assign to Student
+            </label>
+            {loadingStudents ? (
+              <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
+                <FaSpinner className="animate-spin" />
+                Loading students...
+              </div>
+            ) : (
+              <select
+                value={formData.assignedToId}
+                onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+              >
+                <option value="">Select a student (optional)</option>
+                {students.map((student) => (
+                  <option key={student.id} value={student.id}>
+                    {student.firstName} {student.lastName} ({student.username})
+                  </option>
+                ))}
+              </select>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              Leave empty to create a general task, or select a specific student.
+            </p>
           </div>
 
           {error && (

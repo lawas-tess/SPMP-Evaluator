@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import Navbar from '../components/Navbar.jsx';
 import { 
   FaFileUpload, FaChartBar, FaTasks, FaUsers, FaEye,
-  FaHome, FaClipboardList, FaUserGraduate
+  FaHome, FaClipboardList, FaUserGraduate, FaCog, FaListAlt
 } from 'react-icons/fa';
 
 // Import Dashboard Components
@@ -15,7 +15,10 @@ import {
   SubmissionTracker,
   TaskManager,
   ScoreOverride,
-  StudentProgress
+  StudentProgress,
+  GradingCriteria,
+  StudentList,
+  FileReplaceModal
 } from '../components/dashboard';
 
 const Dashboard = () => {
@@ -29,6 +32,7 @@ const Dashboard = () => {
   const [showScoreOverride, setShowScoreOverride] = useState(false);
   const [showStudentProgress, setShowStudentProgress] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
+  const [showFileReplace, setShowFileReplace] = useState(false);
 
   const isStudent = user?.role === 'STUDENT';
   const isProfessor = user?.role === 'PROFESSOR';
@@ -50,7 +54,9 @@ const Dashboard = () => {
     { id: 'overview', label: 'Overview', icon: FaHome },
     { id: 'submissions', label: 'Submissions', icon: FaClipboardList },
     { id: 'tasks', label: 'Task Manager', icon: FaTasks },
+    { id: 'students', label: 'Student List', icon: FaListAlt },
     { id: 'progress', label: 'Student Progress', icon: FaUserGraduate },
+    { id: 'grading', label: 'Grading Criteria', icon: FaCog },
   ];
 
   const tabs = isProfessor ? professorTabs : studentTabs;
@@ -61,10 +67,10 @@ const Dashboard = () => {
     setShowReport(true);
   };
 
-  // Handler for replacing document
+  // Handler for replacing document (UC 2.2)
   const handleReplaceDocument = (document) => {
     setSelectedDocument(document);
-    setActiveTab('upload');
+    setShowFileReplace(true);
   };
 
   // Handler for score override
@@ -303,15 +309,30 @@ const Dashboard = () => {
               <FaUserGraduate className="text-purple-600" /> Student Progress
             </h3>
             <p className="text-gray-600 mb-4">
-              Select a student from the Submissions tab to view their detailed progress.
+              Select a student from the Student List tab to view their detailed progress.
             </p>
             <button
-              onClick={() => setActiveTab('submissions')}
+              onClick={() => setActiveTab('students')}
               className="text-purple-600 hover:text-purple-700 font-semibold"
             >
-              Go to Submissions →
+              Go to Student List →
             </button>
           </div>
+        );
+      
+      // UC 2.10: Class-wide Student List
+      case 'students':
+        return (
+          <StudentList
+            onViewProgress={handleViewStudentProgress}
+            refreshTrigger={refreshTrigger}
+          />
+        );
+      
+      // UC 2.7: Grading Criteria Management
+      case 'grading':
+        return (
+          <GradingCriteria refreshTrigger={refreshTrigger} />
         );
 
       default:
@@ -364,6 +385,22 @@ const Dashboard = () => {
             setSelectedDocument(null);
           }}
           onSuccess={triggerRefresh}
+        />
+      )}
+
+      {/* File Replace Modal (UC 2.2) */}
+      {showFileReplace && selectedDocument && (
+        <FileReplaceModal
+          document={selectedDocument}
+          onClose={() => {
+            setShowFileReplace(false);
+            setSelectedDocument(null);
+          }}
+          onSuccess={() => {
+            setShowFileReplace(false);
+            setSelectedDocument(null);
+            triggerRefresh();
+          }}
         />
       )}
     </div>
