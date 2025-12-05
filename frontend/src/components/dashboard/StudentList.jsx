@@ -29,7 +29,7 @@ const StudentList = ({ onSelectStudent, refreshTrigger }) => {
     setError(null);
     try {
       // Fetch all students
-      const studentsResponse = await userAPI.getStudents();
+      const studentsResponse = await userAPI.getAllStudents();
       const studentList = studentsResponse.data || [];
 
       // Fetch progress for each student
