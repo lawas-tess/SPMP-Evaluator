@@ -20,9 +20,11 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     /**
-     * Creates a new task assigned to a user.
+     * Creates a new task assigned to a user (UC 2.6).
+     * Sends notification to assigned student.
      */
     public Task createTask(String title, String description, LocalDate deadline,
                           Task.Priority priority, Long assignedToUserId, Long createdByUserId) {
@@ -41,7 +43,12 @@ public class TaskService {
         task.setStatus(Task.TaskStatus.PENDING);
         task.setCompleted(false);
 
-        return taskRepository.save(task);
+        Task savedTask = taskRepository.save(task);
+        
+        // UC 2.9: Notify student of new task assignment
+        notificationService.notifyTaskAssigned(savedTask);
+        
+        return savedTask;
     }
 
     /**
@@ -97,7 +104,8 @@ public class TaskService {
     }
 
     /**
-     * Updates task details.
+     * Updates task details (UC 2.9).
+     * Notifies assigned student of task update.
      */
     public Task updateTask(Long taskId, String title, String description,
                           LocalDate deadline, Task.Priority priority) {
@@ -110,7 +118,12 @@ public class TaskService {
         task.setPriority(priority);
         task.setUpdatedAt(LocalDateTime.now());
 
-        return taskRepository.save(task);
+        Task savedTask = taskRepository.save(task);
+        
+        // UC 2.9: Notify student of task update
+        notificationService.notifyTaskUpdated(savedTask);
+        
+        return savedTask;
     }
 
     /**

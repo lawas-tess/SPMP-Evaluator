@@ -147,4 +147,15 @@ export const gradingCriteriaAPI = {
   getDefaultCriteria: () => api.get('/grading-criteria/default'),
 };
 
+// Notification API (Module 2: Use Cases 2.8, 2.9)
+export const notificationAPI = {
+  // UC 2.8: Get notifications (score override alerts)
+  // UC 2.9: Get notifications (task update alerts)
+  getMyNotifications: () => api.get('/notifications'),
+  getUnreadNotifications: () => api.get('/notifications/unread'),
+  getUnreadCount: () => api.get('/notifications/count'),
+  markAsRead: (notificationId) => api.put(`/notifications/${notificationId}/read`),
+  markAllAsRead: () => api.put('/notifications/read-all'),
+};
+
 export default api;

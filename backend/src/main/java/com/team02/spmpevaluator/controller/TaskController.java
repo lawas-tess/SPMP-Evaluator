@@ -4,8 +4,10 @@ import com.team02.spmpevaluator.dto.TaskDTO;
 import com.team02.spmpevaluator.entity.Role;
 import com.team02.spmpevaluator.entity.Task;
 import com.team02.spmpevaluator.entity.User;
+import com.team02.spmpevaluator.service.AuditLogService;
 import com.team02.spmpevaluator.service.TaskService;
 import com.team02.spmpevaluator.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +30,7 @@ public class TaskController {
 
     private final TaskService taskService;
     private final UserService userService;
+    private final AuditLogService auditLogService;
 
     /**
      * Create a new task (Professors only).
@@ -125,12 +128,23 @@ public class TaskController {
 
     /**
      * Get a specific task.
+     * UC 2.5: Student Task Tracking
+     * Step 5: System updates view activity
      */
     @GetMapping("/{taskId}")
-    public ResponseEntity<?> getTask(@PathVariable Long taskId) {
+    public ResponseEntity<?> getTask(@PathVariable Long taskId, HttpServletRequest request) {
         try {
+            // Get current user for logging
+            String username = getAuthenticatedUsername();
+            User currentUser = userService.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
             Task task = taskService.getTaskById(taskId)
                     .orElseThrow(() -> new IllegalArgumentException("Task not found"));
+
+            // UC 2.5 Step 5: System updates view activity
+            String ipAddress = request.getRemoteAddr();
+            auditLogService.logTaskView(currentUser.getId(), taskId, ipAddress);
 
             return ResponseEntity.ok(convertToDTO(task));
         } catch (Exception e) {
