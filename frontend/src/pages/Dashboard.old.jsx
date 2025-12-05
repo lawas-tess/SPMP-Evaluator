@@ -79,10 +79,6 @@ const Dashboard = () => {
     {
       title: 'Professor',
       responsibilities: ['Review submissions', 'Provide feedback', 'Track student progress', 'Generate reports']
-    },
-    {
-      title: 'Project Manager',
-      responsibilities: ['Manage projects', 'Assign tasks', 'Monitor timelines', 'Ensure compliance']
     }
   ];
 

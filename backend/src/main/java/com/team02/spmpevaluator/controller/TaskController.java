@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Task management endpoints for professors and project managers.
+ * Task management endpoints for professors.
  */
 @RestController
 @RequestMapping("/api/tasks")
@@ -30,7 +30,7 @@ public class TaskController {
     private final UserService userService;
 
     /**
-     * Create a new task (Professors/PMs only).
+     * Create a new task (Professors only).
      */
     @PostMapping("/create")
     public ResponseEntity<?> createTask(@RequestBody TaskDTO taskDTO) {
@@ -39,10 +39,10 @@ public class TaskController {
             User creator = userService.findByUsername(username)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            // Only professors and PMs can create tasks
+            // Only professors can create tasks
             if (creator.getRole() == Role.STUDENT) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Only professors and project managers can create tasks");
+                        .body("Only professors can create tasks");
             }
 
             Task task = taskService.createTask(
@@ -104,7 +104,7 @@ public class TaskController {
     }
 
     /**
-     * Get tasks created by the current user (for professors/PMs).
+     * Get tasks created by the current user (for professors).
      */
     @GetMapping("/created")
     public ResponseEntity<?> getCreatedTasks() {
@@ -195,7 +195,7 @@ public class TaskController {
     }
 
     /**
-     * Delete a task (Professors/PMs only).
+     * Delete a task (Professors only).
      */
     @DeleteMapping("/{taskId}")
     public ResponseEntity<?> deleteTask(@PathVariable Long taskId) {
@@ -206,7 +206,7 @@ public class TaskController {
 
             if (currentUser.getRole() == Role.STUDENT) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Only professors and project managers can delete tasks");
+                        .body("Only professors can delete tasks");
             }
 
             taskService.deleteTask(taskId);

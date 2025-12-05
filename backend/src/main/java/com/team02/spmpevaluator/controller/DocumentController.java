@@ -114,7 +114,7 @@ public class DocumentController {
     }
 
     /**
-     * Get a specific document (for professors/PMs to view student submissions).
+     * Get a specific document (for professors to view student submissions).
      */
     @GetMapping("/{documentId}")
     public ResponseEntity<?> getDocument(@PathVariable Long documentId) {
@@ -286,10 +286,10 @@ public class DocumentController {
             User currentUser = userService.findByUsername(username)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            // Only professors and PMs can view all submissions
+            // Only professors can view all submissions
             if (currentUser.getRole() == Role.STUDENT) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Only professors and project managers can view all submissions");
+                        .body("Only professors can view all submissions");
             }
 
             List<SPMPDocument> submissions = documentService.getAllSubmissions(status, studentId);
@@ -314,10 +314,10 @@ public class DocumentController {
             User currentUser = userService.findByUsername(username)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            // Only professors and PMs can override scores
+            // Only professors can override scores
             if (currentUser.getRole() == Role.STUDENT) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Only professors and project managers can override scores");
+                        .body("Only professors can override scores");
             }
 
             Double newScore = Double.valueOf(overrideData.get("score").toString());

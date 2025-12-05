@@ -222,7 +222,6 @@ const AuthPage = () => {
                       >
                         <option value="STUDENT">Student</option>
                         <option value="PROFESSOR">Professor</option>
-                        <option value="PM">Project Manager</option>
                       </select>
                     </div>
                   </>

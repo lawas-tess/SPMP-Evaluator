@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Reporting and analytics endpoints for Professors and Project Managers.
+ * Reporting and analytics endpoints for Professors.
  */
 @RestController
 @RequestMapping("/api/reports")
@@ -45,10 +45,10 @@ public class ReportingController {
             User currentUser = userService.findByUsername(username)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            // Only professors and PMs can view reports
+            // Only professors can view reports
             if (currentUser.getRole() == Role.STUDENT) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Only professors and project managers can access reports");
+                        .body("Only professors can access reports");
             }
 
             List<SPMPDocument> evaluatedDocs = documentRepository.findByEvaluated(true);
@@ -90,7 +90,7 @@ public class ReportingController {
 
             if (currentUser.getRole() == Role.STUDENT) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Only professors and project managers can access reports");
+                        .body("Only professors can access reports");
             }
 
             List<SPMPDocument> studentDocs = documentRepository.findByUploadedBy_Id(userId);
@@ -126,7 +126,7 @@ public class ReportingController {
             User currentUser = userService.findByUsername(username)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            // Only professors and PMs can access, OR student can view their own progress
+            // Only professors can access, OR student can view their own progress
             if (currentUser.getRole() == Role.STUDENT && !currentUser.getId().equals(userId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body("You can only view your own progress");
@@ -202,7 +202,7 @@ public class ReportingController {
 
             if (currentUser.getRole() == Role.STUDENT) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Only professors and project managers can access reports");
+                        .body("Only professors can access reports");
             }
 
             if (daysBack == null) daysBack = 30;
@@ -238,7 +238,7 @@ public class ReportingController {
     }
 
     /**
-     * Override an evaluation score (Professor/PM only).
+     * Override an evaluation score (Professor only).
      */
     @PutMapping("/{documentId}/override-score")
     public ResponseEntity<?> overrideScore(
@@ -252,7 +252,7 @@ public class ReportingController {
 
             if (currentUser.getRole() == Role.STUDENT) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Only professors and project managers can override scores");
+                        .body("Only professors can override scores");
             }
 
             if (newScore < 0 || newScore > 100) {
