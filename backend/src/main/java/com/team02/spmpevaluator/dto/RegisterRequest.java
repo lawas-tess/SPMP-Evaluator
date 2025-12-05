@@ -15,7 +15,7 @@ public class RegisterRequest {
     private String firstName;
     private String lastName;
     /**
-     * Role name as string (e.g. "STUDENT", "PROFESSOR", "PM").
+     * Role name as string (e.g. "STUDENT", "PROFESSOR").
      */
     private String role;
 

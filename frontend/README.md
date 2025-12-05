@@ -103,7 +103,7 @@ frontend/
   - Email address
   - Username selection
   - Password (8+ characters)
-  - Role selection (Student, Professor, Project Manager)
+  - Role selection (Student, Professor)
 - **Social Login**: Placeholders for Facebook, LinkedIn, and Google OAuth
 - **Error Handling**: Clear error messages for failed login/registration
 - **Password Visibility Toggle**: Eye icon to show/hide password

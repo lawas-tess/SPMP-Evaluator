@@ -59,7 +59,7 @@ public class TaskService {
     }
 
     /**
-     * Gets all tasks created by a specific user (professor/PM).
+     * Gets all tasks created by a specific user (professor).
      */
     public List<Task> getTasksByCreator(Long createdByUserId) {
         return taskRepository.findByCreatedBy_Id(createdByUserId);

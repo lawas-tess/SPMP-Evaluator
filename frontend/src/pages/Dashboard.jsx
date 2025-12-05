@@ -31,7 +31,7 @@ const Dashboard = () => {
   const [selectedStudentId, setSelectedStudentId] = useState(null);
 
   const isStudent = user?.role === 'STUDENT';
-  const isProfessor = user?.role === 'PROFESSOR' || user?.role === 'PROJECT_MANAGER';
+  const isProfessor = user?.role === 'PROFESSOR';
 
   const triggerRefresh = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);

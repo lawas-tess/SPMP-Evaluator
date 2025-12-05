@@ -43,7 +43,7 @@ public class AuthController {
                 role = Role.valueOf(registerRequest.getRole().toUpperCase());
             } catch (IllegalArgumentException e) {
                 return ResponseEntity.badRequest()
-                        .body(new ErrorResponse("Invalid role. Allowed values: STUDENT, PROFESSOR, PM", 400));
+                        .body(new ErrorResponse("Invalid role. Allowed values: STUDENT, PROFESSOR", 400));
             }
 
             User newUser = userService.registerUser(
