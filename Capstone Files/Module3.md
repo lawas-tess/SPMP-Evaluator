@@ -13,9 +13,9 @@ This module documents all use cases for the SPMP Evaluator system related to **D
 | Field | Description |
 |:------|:------------|
 | **Use Case Name** | Upload SPMP Document |
-| **Primary Actor** | Student, Project Manager |
+| **Primary Actor** | Student |
 | **Secondary Actors** | Parser Module |
-| **Description** | Allows a **Student or Project Manager** to upload an SPMP document for automated compliance evaluation against the **IEEE 1058 standard**. The system validates the file, preprocesses it, and forwards it to the parser module for clause detection and AI-based compliance analysis. |
+| **Description** | Allows a **Student** to upload an SPMP document for automated compliance evaluation against the **IEEE 1058 standard**. The system validates the file, preprocesses it, and forwards it to the parser module for clause detection and AI-based compliance analysis. |
 | **Preconditions** | User must be authenticated. Parser module must be configured by the Professor. SPMP document must be in a supported format. |
 | **Postconditions** | Document is stored and queued for parsing. Parser module receives document for analysis. |
 
@@ -79,7 +79,7 @@ This module documents all use cases for the SPMP Evaluator system related to **D
 | Field | Description |
 |:------|:------------|
 | **Use Case Name** | View Parser Feedback |
-| **Primary Actor** | Student, Project Manager, Professor |
+| **Primary Actor** | Student, Professor |
 | **Secondary Actors** | System |
 | **Description** | Allows authorized users to view the **structured parser feedback** generated from the evaluation of uploaded SPMP documents. Feedback includes compliance scores, missing IEEE 1058 clauses, and AI-generated recommendations for improvement. |
 | **Preconditions** | SPMP document must have been successfully uploaded and processed. Parser feedback must be generated and stored. User must be authenticated with appropriate role. |
