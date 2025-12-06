@@ -13,9 +13,9 @@ This module documents all use cases for the SPMP Evaluator system related to **A
 | Field | Description |
 |:------|:------------|
 | **Use Case Name** | Register User |
-| **Primary Actor** | User (Student, Professor, Project Manager) |
+| **Primary Actor** | User (Student, Professor, Admin) |
 | **Secondary Actors** | System |
-| **Description** | Allow new users to create an account with **unique credentials and assigned role** (Student, Professor, or Project Manager). Includes password encryption behavior. |
+| **Description** | Allow new users to create an account with **unique credentials and assigned role** (Student, Professor, or Admin). Includes password encryption behavior. |
 | **Preconditions** | User has access to registration interface. System is operational. User has valid email address. Database is accessible. |
 | **Postconditions** | New user account created. Password encrypted and stored securely. User credentials saved in database. User can now login to system. |
 
@@ -44,7 +44,7 @@ This module documents all use cases for the SPMP Evaluator system related to **A
 | Field | Description |
 |:------|:------------|
 | **Use Case Name** | Login |
-| **Primary Actor** | User (Student, Professor, Project Manager) |
+| **Primary Actor** | User (Student, Professor, Admin) |
 | **Secondary Actors** | System |
 | **Description** | Authenticate user credentials and **grant system access**. Includes role-based access determination and session management (JWT). |
 | **Preconditions** | User has registered account. System is operational. Database is accessible. User has valid credentials. |

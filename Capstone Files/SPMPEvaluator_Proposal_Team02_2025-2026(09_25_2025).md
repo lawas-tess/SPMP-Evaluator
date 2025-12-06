@@ -74,7 +74,7 @@ This section defines the project’s goals in a structured and measurable way to
 
 1. Basic Login and Security System  
    * **Functional Requirements:**  
-     * **Role-Based Login** – The system must authenticate users and determine their role (Student, Professor, or Project Manager).
+     * **Role-Based Login** – The system must authenticate users and determine their role (Student, Professor, or Admin).
 
      * **User Registration** – The system must allow new users to create an account with unique credentials.  
      * **User Login** – Users must be able to log in using valid credentials (username/email and password).  
@@ -114,14 +114,6 @@ This section defines the project’s goals in a structured and measurable way to
        * **Monitor Student Progress** – Track task completion and progress status.  
          
 
-     * Project Managers  
-       * **Task Oversight** – View and monitor tasks assigned to the respective departments.  
-       * **Progress Monitoring** – Track project milestones and detect delays.  
-       * **AI-Generated Reports** – Access AI-generated project summaries, submission analytics, and performance evaluations.  
-       * **Role and Access Management** – Manage user roles and permissions.  
-       * **Override Project Evaluations** – Review AI evaluation summaries for projects and, if necessary, adjust or annotate them from a managerial perspective.  
-         
-
    * **Non-Functional Requirements (if applicable):**  
      * **Security** – Enforce strict role-based access control for all features.
 
@@ -147,7 +139,7 @@ This section defines the project’s goals in a structured and measurable way to
 
        * **Error Handling** – Detect corrupted or unsupported files and return meaningful error messages.
 
-       * **Integration with Dashboards** – Deliver parser results to Students, Professors, and Project Managers.
+       * **Integration with Dashboards** – Deliver parser results to Students and Professors.
 
          
 
@@ -176,7 +168,7 @@ This section defines the project’s goals in a structured and measurable way to
 
        * **Ingest Compliance Data** – Receive evaluation results from the Automated Parser Module.
 
-       * **Apply Role-Specific Criteria** – Generate scores differently depending on whether the user is a Professor or Project Manager.
+       * **Apply Role-Specific Criteria** – Generate scores based on professor-defined criteria.
 
        * **Weighted Scoring** – Allow roles to apply different weights (e.g., format \= 20%, content relevance \= 40%, timeliness \= 40%).
 
@@ -193,14 +185,9 @@ This section defines the project’s goals in a structured and measurable way to
          * Manually override scores and add qualitative comments.  
          * Assign individual student grades visible only to that student.
 
-           
-
-       * Project Managers  
          * Generate aggregated scores across students or groups (e.g., team compliance average).
 
          * Produce AI-assisted performance reports that emphasize timeliness, consistency, and standards compliance.
-
-         * Benchmark performance across different tasks or project phases.
 
            
 
@@ -210,7 +197,7 @@ This section defines the project’s goals in a structured and measurable way to
 
      * **Consistency** – Identical inputs must always yield the same score unless deliberately overridden.
 
-     * **Security** – Only authorized users (Professors and PMs) can view, modify, or override scores.
+     * **Security** – Only authorized users (Professors) can view, modify, or override scores.
 
      * **Maintainability** – Role-specific scoring criteria must be configurable without rewriting the entire module.
 
@@ -271,11 +258,9 @@ This section defines the project’s goals in a structured and measurable way to
 
 * **Intended users** – The primary audience who will use the system.
 
-  **Students:** Computer Science and Information Technology students who are learning about software project management and need to create SPMPs for their academic projects.
+  **Students:** Computer Science and Information Technology students who are learning about software project management and need to create SPMPs for their academic projects.
 
-  **Instructors and Professors:** Educators who teach software engineering and project management courses and need an efficient way to evaluate student submissions.
-
-  **Project Managers:** Professionals in software development teams seeking quick compliance checks for internal plans.
+  **Instructors and Professors:** Educators who teach software engineering and project management courses and need an efficient way to evaluate student submissions.
 
 * **How the solution benefits them** – The value and improvements provided to users.
 

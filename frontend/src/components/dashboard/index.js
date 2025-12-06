@@ -12,3 +12,5 @@ export { default as ScoreOverride } from './ScoreOverride';
 export { default as StudentProgress } from './StudentProgress';
 export { default as GradingCriteria } from './GradingCriteria';
 export { default as StudentList } from './StudentList';
+export { default as ParserConfiguration } from './ParserConfiguration';
+export { default as ParserFeedback } from './ParserFeedback';

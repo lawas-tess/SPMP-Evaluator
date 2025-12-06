@@ -14,9 +14,9 @@ This module documents all use cases for the SPMP Evaluator system related to **A
 |:------|:------------|
 | **Use Case Name** | Generate Score & Feedback |
 | **Primary Actor** | System |
-| **Secondary Actors** | Professor, Project Manager, Parser Module |
+| **Secondary Actors** | Professor, Parser Module |
 | **Description** | The system generates compliance scores based on data received from the **Automated Parser Module**. It applies predefined weighted criteria (**Format 20%, Content Relevance 40%, Timeliness 40%**) and attaches parser feedback for transparency. |
-| **Preconditions** | User (Professor or PM) is authenticated. Parser data is successfully received. Scoring weights are configured in the system. |
+| **Preconditions** | Professor is authenticated. Parser data is successfully received. Scoring weights are configured in the system. |
 | **Postconditions** | Scores and feedback are stored securely. Reports are accessible to authorized users only. |
 
 ### Basic Flow 🔄 IN PROGRESS
@@ -108,7 +108,7 @@ This module documents all use cases for the SPMP Evaluator system related to **A
 | Field | Description |
 |:------|:------------|
 | **Use Case Name** | View Scores & Feedback |
-| **Primary Actor** | Student, Professor, Project Manager |
+| **Primary Actor** | Student, Professor |
 | **Secondary Actors** | System |
 | **Description** | Allows authenticated users to **view scoring results and feedback**. **Students** view only their own scores; **Professors** view all their students' evaluations. The system ensures proper access control based on user roles. |
 | **Preconditions** | User is authenticated and authorized. Scoring and feedback data are available in the system. Role-based permissions are configured. |
