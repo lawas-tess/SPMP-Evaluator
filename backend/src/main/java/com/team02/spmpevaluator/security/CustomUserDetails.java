@@ -49,6 +49,9 @@ public class CustomUserDetails implements UserDetails {
         return user.isEnabled();
     }
 
+    /**
+     * Get the underlying User entity
+     */
     public User getUser() {
         return user;
     }

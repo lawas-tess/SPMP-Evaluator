@@ -18,7 +18,9 @@ import {
   StudentProgress,
   GradingCriteria,
   StudentList,
-  FileReplaceModal
+  FileReplaceModal,
+  ParserConfiguration,
+  ParserFeedback
 } from '../components/dashboard';
 
 const Dashboard = () => {
@@ -57,6 +59,7 @@ const Dashboard = () => {
     { id: 'students', label: 'Student List', icon: FaListAlt },
     { id: 'progress', label: 'Student Progress', icon: FaUserGraduate },
     { id: 'grading', label: 'Grading Criteria', icon: FaCog },
+    { id: 'parser', label: 'Parser Configuration', icon: FaCog },
   ];
 
   const tabs = isProfessor ? professorTabs : studentTabs;
@@ -91,7 +94,7 @@ const Dashboard = () => {
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-lg p-8 text-white">
         <h2 className="text-3xl font-bold mb-2">
-          Welcome back, {user?.name || 'User'}!
+          Welcome back, {user?.username || 'User'}!
         </h2>
         <p className="text-purple-100 text-lg">
           {isStudent 
@@ -333,6 +336,12 @@ const Dashboard = () => {
       case 'grading':
         return (
           <GradingCriteria refreshTrigger={refreshTrigger} />
+        );
+      
+      // UC 3.2: Parser Configuration
+      case 'parser':
+        return (
+          <ParserConfiguration />
         );
 
       default:
