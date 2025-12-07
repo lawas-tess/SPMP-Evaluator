@@ -4,8 +4,6 @@ import com.team02.spmpevaluator.dto.ComplianceReportDTO;
 import com.team02.spmpevaluator.dto.SectionAnalysisDTO;
 import com.team02.spmpevaluator.entity.*;
 import com.team02.spmpevaluator.repository.ComplianceScoreRepository;
-import com.team02.spmpevaluator.repository.SectionAnalysisRepository;
-import com.team02.spmpevaluator.util.DocumentParser;
 import com.team02.spmpevaluator.util.IEEE1058StandardConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,9 +22,7 @@ import java.util.*;
 @Transactional
 public class ComplianceEvaluationService {
 
-    private final DocumentParser documentParser;
     private final ComplianceScoreRepository complianceScoreRepository;
-    private final SectionAnalysisRepository sectionAnalysisRepository;
 
     private static final Map<SectionAnalysis.IEEE1058Section, Integer> SECTION_WEIGHTS = Map.ofEntries(
             Map.entry(SectionAnalysis.IEEE1058Section.OVERVIEW, 10),
@@ -73,8 +69,17 @@ public class ComplianceEvaluationService {
         double overallScore = (structureScore * IEEE1058StandardConstants.STRUCTURE_WEIGHT) +
                              (completenessScore * IEEE1058StandardConstants.COMPLETENESS_WEIGHT);
 
-        // Create compliance score entity
-        ComplianceScore complianceScore = new ComplianceScore();
+        // Reuse existing compliance score to support re-evaluation
+        ComplianceScore complianceScore = complianceScoreRepository.findByDocument(document)
+                .orElseGet(() -> {
+                    ComplianceScore newScore = new ComplianceScore();
+                    newScore.setSectionAnalyses(new ArrayList<>());
+                    return newScore;
+                });
+
+        // Clear previous section analyses (orphanRemoval will delete them)
+        complianceScore.getSectionAnalyses().clear();
+
         complianceScore.setDocument(document);
         complianceScore.setOverallScore(overallScore);
         complianceScore.setStructureScore(structureScore);
@@ -85,16 +90,15 @@ public class ComplianceEvaluationService {
         complianceScore.setSummary(generateSummary(overallScore, sectionsFound, documentContent.length()));
         complianceScore.setEvaluatedAt(LocalDateTime.now());
 
-        // Save compliance score first
-        complianceScore = complianceScoreRepository.save(complianceScore);
-
-        // Save section analyses with reference to compliance score
+        // Add new section analyses to the collection
         for (SectionAnalysis analysis : sectionAnalyses) {
             analysis.setComplianceScore(complianceScore);
-            sectionAnalysisRepository.save(analysis);
+            complianceScore.getSectionAnalyses().add(analysis);
         }
 
-        complianceScore.setSectionAnalyses(sectionAnalyses);
+        // Save compliance score (cascade will save section analyses)
+        complianceScore = complianceScoreRepository.save(complianceScore);
+        
         return complianceScore;
     }
 
