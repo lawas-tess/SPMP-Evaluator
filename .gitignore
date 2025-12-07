@@ -55,3 +55,4 @@ wiki/
 *.md
 !README.md
 documentation/
+backend/uploads/

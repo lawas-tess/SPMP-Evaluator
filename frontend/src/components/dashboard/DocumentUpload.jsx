@@ -161,7 +161,7 @@ const DocumentUpload = ({ onUploadSuccess }) => {
       {uploadStatus === 'success' && (
         <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
           <FaCheck className="text-green-500" />
-          Document uploaded successfully! It will be evaluated shortly.
+          Document uploaded. Go to "My Documents" and click "Evaluate" to run the analysis.
         </div>
       )}
 

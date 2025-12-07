@@ -48,21 +48,12 @@ const EvaluationResults = ({ document, onClose }) => {
     return <FaTimes className="text-red-500" />;
   };
 
-  // IEEE 1058 Sections for display
-  const ieee1058Sections = [
-    { id: 1, name: 'Scope', key: 'scope' },
-    { id: 2, name: 'Standards References', key: 'standardsReferences' },
-    { id: 3, name: 'Definitions', key: 'definitions' },
-    { id: 4, name: 'Project Overview', key: 'projectOverview' },
-    { id: 5, name: 'Project Organization', key: 'projectOrganization' },
-    { id: 6, name: 'Managerial Process', key: 'managerialProcess' },
-    { id: 7, name: 'Technical Process', key: 'technicalProcess' },
-    { id: 8, name: 'Work Packages', key: 'workPackages' },
-    { id: 9, name: 'Schedule', key: 'schedule' },
-    { id: 10, name: 'Risk Management', key: 'riskManagement' },
-    { id: 11, name: 'Closeout Plan', key: 'closeoutPlan' },
-    { id: 12, name: 'Annexes', key: 'annexes' }
-  ];
+  const severityTone = {
+    HIGH: { bg: 'bg-red-100 text-red-700 border-red-300', label: 'High (missing core content)' },
+    MEDIUM: { bg: 'bg-yellow-100 text-yellow-700 border-yellow-300', label: 'Medium (low coverage)' },
+    LOW: { bg: 'bg-blue-100 text-blue-700 border-blue-300', label: 'Low (minor gaps)' },
+    INFO: { bg: 'bg-green-100 text-green-700 border-green-300', label: 'Info (healthy)' }
+  };
 
   if (loading) {
     return (
@@ -146,28 +137,32 @@ const EvaluationResults = ({ document, onClose }) => {
         </h3>
         
         <div className="space-y-3">
-          {ieee1058Sections.map((section) => {
-            const analysis = sectionAnalyses.find(a => 
-              a.sectionName?.toLowerCase().includes(section.key.toLowerCase()) ||
-              a.sectionNumber === section.id
-            );
-            const score = analysis?.score || 0;
-            const isExpanded = expandedSection === section.id;
+          {sectionAnalyses.length > 0 ? sectionAnalyses.map((analysis, index) => {
+            const score = analysis?.sectionScore || 0;
+            const isExpanded = expandedSection === analysis.id;
 
             return (
               <div
-                key={section.id}
+                key={analysis.id || index}
                 className="border rounded-lg overflow-hidden"
               >
                 <button
-                  onClick={() => setExpandedSection(isExpanded ? null : section.id)}
+                  onClick={() => setExpandedSection(isExpanded ? null : analysis.id)}
                   className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition"
                 >
                   <div className="flex items-center gap-3">
                     <span className="bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
-                      {section.id}
+                      {index + 1}
                     </span>
-                    <span className="font-semibold text-gray-900">{section.name}</span>
+                    <span className="font-semibold text-gray-900">{analysis.sectionName}</span>
+                    {analysis.sectionWeight ? (
+                      <span className="text-xs text-gray-500 ml-2">Weight: {analysis.sectionWeight}%</span>
+                    ) : null}
+                    {analysis.severity && (
+                      <span className={`text-xs font-semibold px-2 py-1 rounded border ${severityTone[analysis.severity]?.bg || 'bg-gray-100 text-gray-700 border-gray-300'}`}>
+                        {analysis.severity}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     {/* Progress Bar */}
@@ -180,46 +175,64 @@ const EvaluationResults = ({ document, onClose }) => {
                       />
                     </div>
                     <span className={`font-bold min-w-[3rem] text-right ${getScoreColor(score)}`}>
-                      {score}%
+                      {Math.round(score)}%
                     </span>
                     {getScoreIcon(score)}
                   </div>
                 </button>
 
-                {isExpanded && analysis && (
-                  <div className="p-4 bg-gray-50 border-t">
-                    {analysis.findings && analysis.findings.length > 0 && (
+                {isExpanded && (
+                  <div className="p-4 bg-gray-50 border-t space-y-4">
+                    {analysis.coverage !== undefined && (
+                      <div className="text-sm text-gray-600">Coverage: {Math.round(analysis.coverage)}%</div>
+                    )}
+
+                    {analysis.findings && (
                       <div className="mb-4">
                         <h5 className="font-semibold text-gray-700 mb-2">Findings:</h5>
-                        <ul className="list-disc pl-5 space-y-1 text-gray-600">
-                          {analysis.findings.map((finding, i) => (
-                            <li key={i}>{finding}</li>
-                          ))}
-                        </ul>
+                        <p className="text-gray-600">{analysis.findings}</p>
                       </div>
                     )}
                     
-                    {analysis.recommendations && analysis.recommendations.length > 0 && (
+                    {analysis.recommendations && (
                       <div className="bg-blue-50 border border-blue-200 rounded p-3">
                         <h5 className="font-semibold text-blue-700 mb-2 flex items-center gap-2">
                           <FaLightbulb /> Recommendations:
                         </h5>
-                        <ul className="list-disc pl-5 space-y-1 text-blue-800 text-sm">
-                          {analysis.recommendations.map((rec, i) => (
-                            <li key={i}>{rec}</li>
+                        <p className="text-blue-800 text-sm">{analysis.recommendations}</p>
+                      </div>
+                    )}
+
+                    {analysis.missingSubclauses && analysis.missingSubclauses.length > 0 && (
+                      <div className="bg-red-50 border border-red-200 rounded p-3">
+                        <h5 className="font-semibold text-red-700 mb-2 flex items-center gap-2">
+                          <FaExclamationTriangle /> Missing / Weak Subclauses
+                        </h5>
+                        <ul className="list-disc pl-5 text-sm text-red-800 space-y-1">
+                          {analysis.missingSubclauses.map((item, idx) => (
+                            <li key={idx}>{item}</li>
                           ))}
                         </ul>
                       </div>
                     )}
-                    
-                    {!analysis.findings?.length && !analysis.recommendations?.length && (
+
+                    {analysis.evidenceSnippet && (
+                      <div className="bg-white border border-gray-200 rounded p-3">
+                        <h5 className="font-semibold text-gray-700 mb-2">Evidence snippet</h5>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">“{analysis.evidenceSnippet}”</p>
+                      </div>
+                    )}
+
+                    {!analysis.findings && !analysis.recommendations && (
                       <p className="text-gray-500 italic">No detailed analysis available for this section.</p>
                     )}
                   </div>
                 )}
               </div>
             );
-          })}
+          }) : (
+            <p className="text-gray-500 italic text-center py-4">No section analysis data available.</p>
+          )}
         </div>
       </div>
 

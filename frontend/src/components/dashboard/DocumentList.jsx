@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   FaFilePdf, FaFileWord, FaSpinner, FaEye, FaEdit, FaTrash, 
   FaCheckCircle, FaClock, FaExclamationTriangle, FaSync 
@@ -11,6 +11,19 @@ const DocumentList = ({ onViewReport, onReplace, refreshTrigger }) => {
   const [error, setError] = useState(null);
   const [evaluatingId, setEvaluatingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [progressVisible, setProgressVisible] = useState(false);
+  const [progressStep, setProgressStep] = useState(0);
+
+  const progressSteps = [
+    'Queued',
+    'Parsing document',
+    'Applying rubric weights',
+    'Generating feedback',
+    'Finalizing results'
+  ];
+
+  const progressIntervalRef = useRef(null);
+  const progressCloseTimeoutRef = useRef(null);
 
   const fetchDocuments = async () => {
     setLoading(true);
@@ -27,15 +40,47 @@ const DocumentList = ({ onViewReport, onReplace, refreshTrigger }) => {
 
   useEffect(() => {
     fetchDocuments();
+
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+      if (progressCloseTimeoutRef.current) {
+        clearTimeout(progressCloseTimeoutRef.current);
+      }
+    };
   }, [refreshTrigger]);
 
   const handleEvaluate = async (documentId) => {
     setEvaluatingId(documentId);
+    setProgressVisible(true);
+    setProgressStep(0);
+
+    progressIntervalRef.current = setInterval(() => {
+      setProgressStep((prev) => {
+        const next = prev + 1;
+        return next >= progressSteps.length - 1 ? progressSteps.length - 2 : next;
+      });
+    }, 650);
+
     try {
       await documentAPI.evaluate(documentId);
+      setProgressStep(progressSteps.length - 1);
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+      progressCloseTimeoutRef.current = setTimeout(() => {
+        setProgressVisible(false);
+        setProgressStep(0);
+      }, 600);
       await fetchDocuments();
     } catch (err) {
       alert(err.response?.data?.message || 'Evaluation failed');
+      setProgressVisible(false);
+      setProgressStep(0);
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
     } finally {
       setEvaluatingId(null);
     }
@@ -219,6 +264,52 @@ const DocumentList = ({ onViewReport, onReplace, refreshTrigger }) => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {progressVisible && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <FaSpinner className="animate-spin text-purple-600 text-xl" />
+              <div>
+                <p className="text-sm text-gray-500">Evaluation in progress</p>
+                <p className="font-semibold text-gray-900">Please keep this tab open</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {progressSteps.map((step, index) => {
+                const isDone = index < progressStep;
+                const isCurrent = index === progressStep;
+                return (
+                  <div
+                    key={step}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                      isDone
+                        ? 'border-green-100 bg-green-50 text-green-800'
+                        : isCurrent
+                        ? 'border-purple-100 bg-purple-50 text-purple-800'
+                        : 'border-gray-100 bg-gray-50 text-gray-500'
+                    }`}
+                  >
+                    {isDone ? (
+                      <FaCheckCircle className="text-green-500" />
+                    ) : isCurrent ? (
+                      <FaSpinner className="animate-spin text-purple-500" />
+                    ) : (
+                      <FaClock className="text-gray-400" />
+                    )}
+                    <span>{step}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 text-xs text-gray-500">
+              Do not close the page. The report will appear once all steps finish.
+            </div>
+          </div>
         </div>
       )}
     </div>
