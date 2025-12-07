@@ -117,6 +117,15 @@ This module documents all use cases for the SPMP Evaluator system related to **D
 
 **Total: 3/3 Use Cases FULLY IMPLEMENTED ✅**
 
+### Remaining Backlog (for Laborada)
+- [ ] **Upgrade to full AI-driven scoring** — Send each section's extracted text to OpenRouter AI and receive:
+  - Completeness assessment ("Is this section complete?")
+  - Quality score (0-100 based on IEEE 1058 compliance, clarity, depth)
+  - Specific missing elements ("Lacks mitigation strategies for identified risks")
+  - Contextual recommendations ("Consider adding response plans for each risk")
+- [ ] Replace keyword-based coverage scoring in `ComplianceEvaluationService.java` with AI-generated scores
+- [ ] Add caching/rate-limiting for AI calls to avoid quota issues
+
 > **Current State:**
 > - ✅ Backend entities: `ParserConfiguration`, `ParserFeedback`
 > - ✅ Repository interfaces: CRUD operations for configurations and feedback

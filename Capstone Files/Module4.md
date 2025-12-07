@@ -142,7 +142,8 @@ This module documents all use cases for the SPMP Evaluator system related to **A
 
 **Total: 4/4 Use Cases Fully Implemented (100%)**
 
-### Remaining Backlog (kept for other contributor)
-- Re-evaluation button for already evaluated documents
-- Score history tracking across evaluations
-- Export reports as PDF/Excel
+### Remaining Backlog (for Pepito)
+- [ ] Re-evaluation button for already evaluated documents
+- [ ] Score history tracking across evaluations
+- [ ] Export reports as PDF/Excel
+- [ ] **Update UI to display AI-generated contextual feedback** — When Module 3 upgrades scoring to full AI, adjust `EvaluationResults.jsx` to render richer AI responses (if response shape changes)
