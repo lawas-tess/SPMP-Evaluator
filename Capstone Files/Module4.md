@@ -143,7 +143,28 @@ This module documents all use cases for the SPMP Evaluator system related to **A
 **Total: 4/4 Use Cases Fully Implemented (100%)**
 
 ### Remaining Backlog (for Pepito)
-- [ ] Re-evaluation button for already evaluated documents
-- [ ] Score history tracking across evaluations
-- [ ] Export reports as PDF/Excel
+- [~] Re-evaluation button for already evaluated documents - **PARTIALLY IMPLEMENTED** (backend works, needs testing)
+- [~] Score history tracking across evaluations - **PARTIALLY IMPLEMENTED** (entity and API complete, needs frontend polish)
+- [~] Export reports as PDF/Excel - **PARTIALLY IMPLEMENTED** (basic export works, needs formatting improvements)
+- [~] Implement override scoring for professor both backend and database - **PARTIALLY IMPLEMENTED** (archiving works, notification pending)
 - [ ] **Update UI to display AI-generated contextual feedback** — When Module 3 upgrades scoring to full AI, adjust `EvaluationResults.jsx` to render richer AI responses (if response shape changes)
+- [ ] **Fix re-evaluation score variation** - Currently returns same score on same document (deterministic algorithm)
+- [ ] **Add unit tests** - Create test coverage for new endpoints and services
+- [ ] **Improve PDF formatting** - Add better styling, charts, and page breaks
+- [ ] **Enhance history UI** - Show score differences, trend charts, and comparison view
+
+### Partially Implemented Features 🔄
+- **Re-evaluation Endpoint**: `POST /api/documents/{documentId}/re-evaluate` - Backend complete, orphan removal issue fixed
+- **Score History Tracking**: Entity `ComplianceScoreHistory`, archiving service, and repository complete
+- **History Retrieval**: `GET /api/documents/{documentId}/history` - API works, frontend displays basic table
+- **PDF Export**: `GET /api/documents/{documentId}/export/pdf` - Basic PDF generation with Apache PDFBox
+- **Excel Export**: `GET /api/documents/{documentId}/export/excel` - Basic Excel export with Apache POI
+- **Override Persistence**: Archives original score before professor override with audit trail
+- **Frontend Integration**: Re-evaluate button, history display, and export buttons added
+
+### Known Issues & Limitations
+- Re-evaluation produces identical scores (deterministic algorithm, no AI variation)
+- Frontend history display needs better formatting and visualization
+- PDF export needs improved layout and styling
+- Missing unit/integration tests for new features
+- No email notifications for score changes yet
