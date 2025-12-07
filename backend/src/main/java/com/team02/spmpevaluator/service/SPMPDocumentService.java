@@ -32,6 +32,7 @@ public class SPMPDocumentService {
     private final DocumentParser documentParser;
     private final ComplianceScoreRepository complianceScoreRepository;
     private final NotificationService notificationService;
+    private final ComplianceHistoryService complianceHistoryService;
     private static final String UPLOAD_DIR = "uploads/documents/";
     private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
@@ -281,6 +282,9 @@ public class SPMPDocumentService {
         }
 
         ComplianceScore complianceScore = document.getComplianceScore();
+        // Archive current score before override
+        complianceHistoryService.archiveScore(complianceScore, "OVERRIDE", professor.getId());
+
         complianceScore.setProfessorOverride(newScore);
         complianceScore.setProfessorNotes(notes);
         complianceScore.setReviewedBy(professor);
