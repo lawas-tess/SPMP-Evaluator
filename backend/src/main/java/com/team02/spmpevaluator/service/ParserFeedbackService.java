@@ -1,27 +1,34 @@
 package com.team02.spmpevaluator.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team02.spmpevaluator.entity.SPMPDocument;
 import com.team02.spmpevaluator.entity.ParserConfiguration;
 import com.team02.spmpevaluator.entity.ParserFeedback;
 import com.team02.spmpevaluator.repository.ParserFeedbackRepository;
+import com.team02.spmpevaluator.util.DocumentParser;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
  * Service for managing parser feedback and AI-based document analysis.
- * This service will eventually integrate with an AI parser module for
- * IEEE 1058 compliance analysis.
+ * Integrates with OpenRouter AI for IEEE 1058 compliance analysis.
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ParserFeedbackService {
 
     private final ParserFeedbackRepository parserFeedbackRepository;
+    private final OpenRouterService openRouterService;
+    private final DocumentParser documentParser;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Create a new parser feedback entry (for future AI integration)
@@ -44,19 +51,87 @@ public class ParserFeedbackService {
      */
     @Transactional
     public ParserFeedback generateMockFeedback(SPMPDocument document, ParserConfiguration config) {
+        // Actually analyze with AI now!
+        return analyzeDocumentWithAI(document, config);
+    }
+
+    /**
+     * Analyze document using OpenRouter AI service for IEEE 1058 compliance.
+     * Falls back to mock data if AI service is unavailable.
+     */
+    @Transactional
+    public ParserFeedback analyzeDocumentWithAI(SPMPDocument document, ParserConfiguration config) {
         ParserFeedback feedback = new ParserFeedback();
         feedback.setDocument(document);
         feedback.setParserConfiguration(config);
-        feedback.setComplianceScore(75.0);
-        feedback.setDetectedClauses(getMockDetectedClauses());
-        feedback.setMissingClauses(getMockMissingClauses());
-        feedback.setRecommendations(getMockRecommendations());
-        feedback.setAnalysisReport("Mock analysis report: Document shows moderate compliance with IEEE 1058 standard.");
-        feedback.setStatus(ParserFeedback.FeedbackStatus.COMPLETED);
         feedback.setAnalyzedAt(LocalDateTime.now());
-        feedback.setParserVersion("1.0.0-MOCK");
+        
+        try {
+            // Extract document content
+            String filePath = document.getFileUrl();
+            String documentContent = documentParser.extractTextFromFile(filePath);
+            
+            if (documentContent == null || documentContent.trim().isEmpty()) {
+                feedback.setStatus(ParserFeedback.FeedbackStatus.FAILED);
+                feedback.setErrorMessage("Could not extract text from document");
+                feedback.setParserVersion("1.0.0-ERROR");
+                return parserFeedbackRepository.save(feedback);
+            }
+            
+            log.info("Analyzing document with AI: {} ({} chars)", document.getFileName(), documentContent.length());
+            
+            // Call AI service
+            Map<String, Object> analysis = openRouterService.analyzeDocument(documentContent);
+            
+            // Map AI response to feedback entity
+            feedback.setComplianceScore(parseDouble(analysis.get("complianceScore"), 65.0));
+            feedback.setDetectedClauses(toJson(analysis.get("detectedClauses")));
+            feedback.setMissingClauses(toJson(analysis.get("missingClauses")));
+            feedback.setRecommendations(toJson(analysis.get("recommendations")));
+            feedback.setAnalysisReport(String.valueOf(analysis.getOrDefault("summary", "Analysis completed")));
+            feedback.setStatus(ParserFeedback.FeedbackStatus.COMPLETED);
+            feedback.setParserVersion(openRouterService.isConfigured() ? "1.0.0-AI" : "1.0.0-MOCK");
+            
+            log.info("AI analysis completed with score: {}", feedback.getComplianceScore());
+            
+        } catch (Exception e) {
+            log.error("AI analysis failed: {}", e.getMessage(), e);
+            // Fallback to basic analysis
+            feedback.setComplianceScore(50.0);
+            feedback.setDetectedClauses(getMockDetectedClauses());
+            feedback.setMissingClauses(getMockMissingClauses());
+            feedback.setRecommendations(getMockRecommendations());
+            feedback.setAnalysisReport("Analysis encountered an error: " + e.getMessage());
+            feedback.setStatus(ParserFeedback.FeedbackStatus.COMPLETED);
+            feedback.setParserVersion("1.0.0-FALLBACK");
+        }
         
         return parserFeedbackRepository.save(feedback);
+    }
+
+    /**
+     * Convert object to JSON string
+     */
+    private String toJson(Object obj) {
+        if (obj == null) return "[]";
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (Exception e) {
+            return "[]";
+        }
+    }
+
+    /**
+     * Parse double with fallback
+     */
+    private double parseDouble(Object value, double defaultValue) {
+        if (value == null) return defaultValue;
+        if (value instanceof Number) return ((Number) value).doubleValue();
+        try {
+            return Double.parseDouble(String.valueOf(value));
+        } catch (Exception e) {
+            return defaultValue;
+        }
     }
 
     /**
