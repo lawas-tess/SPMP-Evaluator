@@ -5,11 +5,15 @@ import com.team02.spmpevaluator.entity.ComplianceScore;
 import com.team02.spmpevaluator.entity.Role;
 import com.team02.spmpevaluator.entity.SPMPDocument;
 import com.team02.spmpevaluator.entity.User;
+import com.team02.spmpevaluator.service.ComplianceHistoryService;
 import com.team02.spmpevaluator.repository.ComplianceScoreRepository;
 import com.team02.spmpevaluator.service.AuditLogService;
 import com.team02.spmpevaluator.service.ComplianceEvaluationService;
+import com.team02.spmpevaluator.service.ReportExportService;
 import com.team02.spmpevaluator.service.SPMPDocumentService;
 import com.team02.spmpevaluator.service.UserService;
+import com.team02.spmpevaluator.dto.ComplianceScoreHistoryDTO;
+import com.team02.spmpevaluator.entity.ComplianceScoreHistory;
 import com.team02.spmpevaluator.util.DocumentParser;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +44,8 @@ public class DocumentController {
     private final UserService userService;
     private final AuditLogService auditLogService;
     private final ComplianceScoreRepository complianceScoreRepository;
+    private final ComplianceHistoryService complianceHistoryService;
+    private final ReportExportService reportExportService;
 
     /**
      * Upload an SPMP document.
@@ -81,7 +87,7 @@ public class DocumentController {
             // Extract text content
             String documentContent = documentService.getDocumentContent(documentId);
 
-            // Evaluate
+            // Evaluate (first time only - no archiving)
             var complianceScore = evaluationService.evaluateDocument(document, documentContent);
 
             // Update document status
@@ -373,10 +379,132 @@ public class DocumentController {
     }
 
     /**
+     * Re-evaluate a document even if it was already evaluated.
+     */
+    @PostMapping("/{documentId}/re-evaluate")
+    public ResponseEntity<?> reEvaluateDocument(@PathVariable Long documentId) {
+        try {
+            // Get document
+            SPMPDocument document = documentService.getDocumentById(documentId)
+                    .orElseThrow(() -> new IllegalArgumentException("Document not found"));
+
+            // Archive existing score BEFORE loading it into the evaluation service
+            ComplianceScore existingScore = complianceScoreRepository.findByDocumentId(documentId).orElse(null);
+            if (existingScore != null) {
+                // Create history entry from the existing score (without fetching section analyses)
+                complianceHistoryService.archiveScore(existingScore, "RE_EVALUATION", getCurrentUserId());
+            }
+
+            // Extract text content
+            String documentContent = documentService.getDocumentContent(documentId);
+
+            // Re-evaluate (this will clear old section analyses and create new ones)
+            var complianceScore = evaluationService.evaluateDocument(document, documentContent);
+
+            // Update document status
+            documentService.updateDocumentEvaluation(documentId, "", true);
+
+            // Return report
+            ComplianceReportDTO report = evaluationService.convertToDTO(
+                complianceScore, 
+                document.getId(), 
+                document.getFileName()
+            );
+            return ResponseEntity.ok(report);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Re-evaluation failed: " + e.getMessage());
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to process document: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Re-evaluation error: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Get score history for a document.
+     */
+    @GetMapping("/{documentId}/history")
+    public ResponseEntity<?> getScoreHistory(@PathVariable Long documentId) {
+        try {
+            List<ComplianceScoreHistory> history = complianceHistoryService.getHistoryForDocument(documentId);
+            List<ComplianceScoreHistoryDTO> dtos = history.stream().map(this::toHistoryDTO).toList();
+            return ResponseEntity.ok(dtos);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to retrieve history: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Export report as PDF.
+     */
+    @GetMapping("/{documentId}/export/pdf")
+    public ResponseEntity<?> exportPdf(@PathVariable Long documentId) {
+        try {
+            byte[] file = reportExportService.exportPdf(documentId);
+            return ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=spmp-report-" + documentId + ".pdf")
+                    .header("Content-Type", "application/pdf")
+                    .body(file);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to export PDF: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Export report as Excel.
+     */
+    @GetMapping("/{documentId}/export/excel")
+    public ResponseEntity<?> exportExcel(@PathVariable Long documentId) {
+        try {
+            byte[] file = reportExportService.exportExcel(documentId);
+            return ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=spmp-report-" + documentId + ".xlsx")
+                    .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    .body(file);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to export Excel: " + e.getMessage());
+        }
+    }
+
+    private ComplianceScoreHistoryDTO toHistoryDTO(ComplianceScoreHistory history) {
+        ComplianceScoreHistoryDTO dto = new ComplianceScoreHistoryDTO();
+        dto.setId(history.getId());
+        dto.setOverallScore(history.getOverallScore());
+        dto.setStructureScore(history.getStructureScore());
+        dto.setCompletenessScore(history.getCompletenessScore());
+        dto.setSectionsFound(history.getSectionsFound());
+        dto.setTotalSectionsRequired(history.getTotalSectionsRequired());
+        dto.setCompliant(history.isCompliant());
+        dto.setProfessorOverride(history.getProfessorOverride());
+        dto.setProfessorNotes(history.getProfessorNotes());
+        dto.setSummary(history.getSummary());
+        dto.setEvaluatedAt(history.getEvaluatedAt());
+        dto.setRecordedAt(history.getRecordedAt());
+        dto.setVersionNumber(history.getVersionNumber());
+        dto.setSource(history.getSource());
+        return dto;
+    }
+
+    /**
      * Helper method to get authenticated username.
      */
     private String getAuthenticatedUsername() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null ? authentication.getName() : null;
+    }
+
+    private Long getCurrentUserId() {
+        String username = getAuthenticatedUsername();
+        if (username == null) {
+            return null;
+        }
+        return userService.findByUsername(username)
+                .map(User::getId)
+                .orElse(null);
     }
 }
