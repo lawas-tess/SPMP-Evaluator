@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FaChartBar, FaCheckCircle, FaExclamationTriangle, FaTimes, 
-  FaSpinner, FaLightbulb, FaArrowLeft, FaPrint
+  FaSpinner, FaLightbulb, FaArrowLeft, FaPrint, FaDownload, FaHistory
 } from 'react-icons/fa';
 import { documentAPI } from '../../services/apiService';
 
@@ -10,10 +10,13 @@ const EvaluationResults = ({ document, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedSection, setExpandedSection] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (document?.id) {
       fetchReport();
+      fetchHistory();
     }
   }, [document?.id]);
 
@@ -27,6 +30,35 @@ const EvaluationResults = ({ document, onClose }) => {
       setError(err.response?.data?.message || 'Failed to load evaluation report');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchHistory = async () => {
+    try {
+      const response = await documentAPI.getHistory(document.id);
+      setHistory(response.data || []);
+    } catch (err) {
+      // history is optional; fail silently to not block report view
+      setHistory([]);
+    }
+  };
+
+  const downloadFile = async (type) => {
+    setExporting(true);
+    try {
+      const apiCall = type === 'pdf' ? documentAPI.exportPdf : documentAPI.exportExcel;
+      const res = await apiCall(document.id);
+      const blob = new Blob([res.data], { type: type === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = `spmp-report-${document.id}.${type === 'pdf' ? 'pdf' : 'xlsx'}`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.response?.data || 'Export failed');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -94,12 +126,28 @@ const EvaluationResults = ({ document, onClose }) => {
         >
           <FaArrowLeft /> Back to Documents
         </button>
-        <button
-          onClick={() => window.print()}
-          className="text-purple-600 hover:text-purple-700 flex items-center gap-2"
-        >
-          <FaPrint /> Print Report
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => window.print()}
+            className="text-purple-600 hover:text-purple-700 flex items-center gap-2"
+          >
+            <FaPrint /> Print
+          </button>
+          <button
+            onClick={() => downloadFile('pdf')}
+            disabled={exporting}
+            className="text-purple-600 hover:text-purple-700 flex items-center gap-2 disabled:opacity-50"
+          >
+            <FaDownload /> PDF
+          </button>
+          <button
+            onClick={() => downloadFile('excel')}
+            disabled={exporting}
+            className="text-purple-600 hover:text-purple-700 flex items-center gap-2 disabled:opacity-50"
+          >
+            <FaDownload /> Excel
+          </button>
+        </div>
       </div>
 
       {/* Document Info */}
@@ -262,6 +310,34 @@ const EvaluationResults = ({ document, onClose }) => {
             </p>
           )}
         </div>
+      </div>
+
+      {/* History */}
+      <div className="mt-6 border border-gray-200 rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-3 text-gray-800 font-semibold">
+          <FaHistory /> Score History
+        </div>
+        {history.length === 0 ? (
+          <p className="text-sm text-gray-500">No previous evaluations recorded.</p>
+        ) : (
+          <div className="space-y-2">
+            {history.map((item) => (
+              <div key={item.id} className="flex justify-between text-sm border-b border-gray-100 pb-2">
+                <div className="space-y-1">
+                  <p className="font-semibold">Version {item.versionNumber} • {item.source || 'EVALUATION'}</p>
+                  <p className="text-gray-600">Overall: {Math.round(item.overallScore)}% | Structure: {Math.round(item.structureScore)}% | Completeness: {Math.round(item.completenessScore)}%</p>
+                  {item.professorOverride != null && (
+                    <p className="text-gray-600">Override: {Math.round(item.professorOverride)}%</p>
+                  )}
+                </div>
+                <div className="text-gray-500 text-right">
+                  <p>{item.recordedAt ? new Date(item.recordedAt).toLocaleString() : ''}</p>
+                  <p className="text-xs">Evaluated: {item.evaluatedAt ? new Date(item.evaluatedAt).toLocaleString() : '—'}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
