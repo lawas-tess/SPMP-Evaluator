@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 import java.util.*;
 
 /**
@@ -27,6 +28,26 @@ public class ComplianceEvaluationService {
     private final ComplianceScoreRepository complianceScoreRepository;
     private final SectionAnalysisRepository sectionAnalysisRepository;
 
+    private static final Map<SectionAnalysis.IEEE1058Section, Integer> SECTION_WEIGHTS = Map.ofEntries(
+            Map.entry(SectionAnalysis.IEEE1058Section.OVERVIEW, 10),
+            Map.entry(SectionAnalysis.IEEE1058Section.DOCUMENTATION_PLAN, 8),
+            Map.entry(SectionAnalysis.IEEE1058Section.MASTER_SCHEDULE, 10),
+            Map.entry(SectionAnalysis.IEEE1058Section.ORGANIZATION, 12),
+            Map.entry(SectionAnalysis.IEEE1058Section.STANDARDS_PRACTICES, 10),
+            Map.entry(SectionAnalysis.IEEE1058Section.RISK_MANAGEMENT, 10),
+            Map.entry(SectionAnalysis.IEEE1058Section.STAFF_ORGANIZATION, 8),
+            Map.entry(SectionAnalysis.IEEE1058Section.BUDGET_RESOURCE, 10),
+            Map.entry(SectionAnalysis.IEEE1058Section.REVIEWS_AUDITS, 7),
+            Map.entry(SectionAnalysis.IEEE1058Section.PROBLEM_RESOLUTION, 5),
+            Map.entry(SectionAnalysis.IEEE1058Section.CHANGE_MANAGEMENT, 5),
+            Map.entry(SectionAnalysis.IEEE1058Section.GLOSSARY_APPENDIX, 5)
+    );
+
+    private record SubclauseDefinition(String id, String title, Set<String> keywords, int weight) {}
+
+    private static final Map<SectionAnalysis.IEEE1058Section, List<SubclauseDefinition>> SUBCLAUSE_DEFINITIONS =
+            buildSubclauseDefinitions();
+
     /**
      * Evaluates a document's compliance with IEEE 1058 standard.
      * Returns a detailed compliance report with section analysis and scoring.
@@ -39,7 +60,7 @@ public class ComplianceEvaluationService {
         int sectionsFound = 0;
 
         for (SectionAnalysis.IEEE1058Section section : SectionAnalysis.IEEE1058Section.values()) {
-            SectionAnalysis analysis = analyzeSectionPresence(section, normalizedContent);
+            SectionAnalysis analysis = analyzeSectionPresence(section, normalizedContent, documentContent);
             sectionAnalyses.add(analysis);
             if (analysis.isPresent()) {
                 sectionsFound++;
@@ -80,26 +101,56 @@ public class ComplianceEvaluationService {
     /**
      * Analyzes whether a specific IEEE 1058 section is present in the document.
      */
-    private SectionAnalysis analyzeSectionPresence(SectionAnalysis.IEEE1058Section section, String content) {
+    private SectionAnalysis analyzeSectionPresence(SectionAnalysis.IEEE1058Section section, String normalizedContent, String originalContent) {
         SectionAnalysis analysis = new SectionAnalysis();
         analysis.setSectionName(section);
 
         Set<String> keywords = getKeywordsForSection(section);
-        boolean sectionPresent = documentParser.containsKeywords(content, keywords);
+        int matchedKeywords = (int) keywords.stream()
+                .filter(kw -> normalizedContent.contains(kw.toLowerCase()))
+                .count();
+
+        double primaryCoverage = keywords.isEmpty() ? 0.0 : (matchedKeywords / (double) keywords.size()) * 100.0;
+
+        SubclauseResult subclauseResult = evaluateSubclauses(section, normalizedContent, originalContent);
+        boolean sectionPresent = matchedKeywords > 0 || subclauseResult.coveragePct() > 0;
+
+        double combinedCoverage = SUBCLAUSE_DEFINITIONS.getOrDefault(section, Collections.emptyList()).isEmpty()
+                ? primaryCoverage
+                : (primaryCoverage * 0.5) + (subclauseResult.coveragePct() * 0.5);
+
+        double sectionScore = computeSectionScore(combinedCoverage);
 
         analysis.setPresent(sectionPresent);
-        analysis.setSectionScore(sectionPresent ? 100.0 : 0.0);
+        analysis.setSectionScore(sectionScore);
+        analysis.setCoverage(combinedCoverage);
+        analysis.setSeverity(resolveSeverity(sectionPresent, combinedCoverage, subclauseResult.missingSubclauses()));
+        analysis.setEvidenceSnippet(Optional.ofNullable(subclauseResult.evidenceSnippet())
+                .orElseGet(() -> extractEvidenceSnippet(originalContent, keywords)));
+        analysis.setMissingSubclauses(String.join(", ", subclauseResult.missingSubclauses()));
+        analysis.setSectionWeight(SECTION_WEIGHTS.getOrDefault(section, 0));
 
-        if (sectionPresent) {
-            analysis.setFindings("Section '" + section.getDisplayName() + "' detected in document.");
-            analysis.setRecommendations("Continue ensuring comprehensive coverage of this section.");
-        } else {
-            analysis.setFindings("Section '" + section.getDisplayName() + "' not found in document.");
-            analysis.setRecommendations("Add the '" + section.getDisplayName() +
-                    "' section to comply with IEEE 1058 standard.");
-        }
+        String findings = buildFindings(section, sectionPresent, matchedKeywords, keywords.size(), combinedCoverage,
+                subclauseResult);
+        String recommendations = buildRecommendations(section, sectionPresent, combinedCoverage, subclauseResult);
+
+        analysis.setFindings(findings);
+        analysis.setRecommendations(recommendations);
 
         return analysis;
+    }
+
+    /**
+     * Computes a section score based on keyword coverage and basic structure signals.
+     * Presence grants a base score; additional coverage and heading signals increase it but cap below 100.
+     */
+    private double computeSectionScore(double combinedCoverage) {
+        if (combinedCoverage <= 0) {
+            return 0.0;
+        }
+        // Base for presence, plus coverage-driven bonus (caps at 95)
+        double score = 40.0 + Math.min(55.0, combinedCoverage * 0.6);
+        return Math.min(score, 95.0);
     }
 
     /**
@@ -202,11 +253,12 @@ public class ComplianceEvaluationService {
 
     /**
      * Converts ComplianceScore entity to DTO for API responses.
+     * Overloaded method that accepts document info to avoid lazy loading issues.
      */
-    public ComplianceReportDTO convertToDTO(ComplianceScore complianceScore) {
+    public ComplianceReportDTO convertToDTO(ComplianceScore complianceScore, Long documentId, String documentName) {
         ComplianceReportDTO dto = new ComplianceReportDTO();
-        dto.setDocumentId(complianceScore.getDocument().getId());
-        dto.setDocumentName(complianceScore.getDocument().getFileName());
+        dto.setDocumentId(documentId);
+        dto.setDocumentName(documentName);
         dto.setOverallScore(complianceScore.getOverallScore());
         dto.setStructureScore(complianceScore.getStructureScore());
         dto.setCompletenessScore(complianceScore.getCompletenessScore());
@@ -230,6 +282,11 @@ public class ComplianceEvaluationService {
                 sectionDTO.setFindings(analysis.getFindings());
                 sectionDTO.setRecommendations(analysis.getRecommendations());
                 sectionDTO.setPageNumber(analysis.getPageNumber());
+                sectionDTO.setCoverage(analysis.getCoverage());
+                sectionDTO.setSeverity(analysis.getSeverity());
+                sectionDTO.setEvidenceSnippet(analysis.getEvidenceSnippet());
+                sectionDTO.setMissingSubclauses(parseMissingSubclauses(analysis.getMissingSubclauses()));
+                sectionDTO.setSectionWeight(analysis.getSectionWeight());
                 sectionDTOs.add(sectionDTO);
             }
         }
@@ -237,4 +294,220 @@ public class ComplianceEvaluationService {
 
         return dto;
     }
+
+    private List<String> parseMissingSubclauses(String missing) {
+        if (missing == null || missing.isBlank()) {
+            return Collections.emptyList();
+        }
+        return Arrays.stream(missing.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    private SubclauseResult evaluateSubclauses(SectionAnalysis.IEEE1058Section section, String normalizedContent, String originalContent) {
+        List<SubclauseDefinition> definitions = SUBCLAUSE_DEFINITIONS.getOrDefault(section, Collections.emptyList());
+        if (definitions.isEmpty()) {
+            return new SubclauseResult(0.0, Collections.emptyList(), null);
+        }
+
+        double totalCoverage = 0.0;
+        List<String> missing = new ArrayList<>();
+        String evidenceSnippet = null;
+
+        for (SubclauseDefinition def : definitions) {
+            int matchedKeywords = (int) def.keywords().stream()
+                    .filter(kw -> normalizedContent.contains(kw.toLowerCase()))
+                    .count();
+            double coveragePct = def.keywords().isEmpty() ? 0.0 : (matchedKeywords / (double) def.keywords().size()) * 100.0;
+            totalCoverage += coveragePct;
+
+            if (matchedKeywords == 0) {
+                missing.add(def.id() + " " + def.title());
+            } else if (evidenceSnippet == null) {
+                evidenceSnippet = extractEvidenceSnippet(originalContent, def.keywords());
+            }
+        }
+
+        double avgCoverage = totalCoverage / definitions.size();
+        return new SubclauseResult(avgCoverage, missing, evidenceSnippet);
+    }
+
+    private String buildFindings(SectionAnalysis.IEEE1058Section section,
+                                 boolean present,
+                                 int matchedKeywords,
+                                 int keywordPool,
+                                 double combinedCoverage,
+                                 SubclauseResult subclauseResult) {
+        if (!present) {
+            return "Section '" + section.getDisplayName() + "' not detected in the document.";
+        }
+
+        StringBuilder findings = new StringBuilder();
+        findings.append("Section '").append(section.getDisplayName()).append("' detected. ");
+        findings.append(String.format("Coverage: %.0f%% of keywords matched (%d/%d). ", combinedCoverage, matchedKeywords, keywordPool));
+
+        if (!subclauseResult.missingSubclauses().isEmpty()) {
+            findings.append("Missing subclauses: ");
+            findings.append(String.join(", ", subclauseResult.missingSubclauses()));
+            findings.append(".");
+        } else {
+            findings.append("All mapped subclauses detected.");
+        }
+        return findings.toString();
+    }
+
+    private String buildRecommendations(SectionAnalysis.IEEE1058Section section,
+                                        boolean present,
+                                        double coverage,
+                                        SubclauseResult subclauseResult) {
+        if (!present) {
+            return "Add a dedicated '" + section.getDisplayName() + "' section. Include the key subclauses: " +
+                    String.join(", ", listSubclauseTitles(section)) + ".";
+        }
+
+        if (!subclauseResult.missingSubclauses().isEmpty()) {
+            return "Address missing subclauses: " + String.join(", ", subclauseResult.missingSubclauses()) +
+                    ". Provide concrete details aligned with IEEE 1058 expectations.";
+        }
+
+        if (coverage < 75) {
+            return "Strengthen this section with quantitative details, ownership, and acceptance criteria. " +
+                    sectionSpecificTip(section);
+        }
+
+        return "Section is present. Consider tightening clarity, cross-references, and evidence of execution.";
+    }
+
+    private String resolveSeverity(boolean present, double coverage, List<String> missingSubclauses) {
+        if (!present) {
+            return "HIGH";
+        }
+        if (!missingSubclauses.isEmpty()) {
+            return "HIGH";
+        }
+        if (coverage < 60) {
+            return "MEDIUM";
+        }
+        if (coverage < 80) {
+            return "LOW";
+        }
+        return "INFO";
+    }
+
+    private List<String> listSubclauseTitles(SectionAnalysis.IEEE1058Section section) {
+        return SUBCLAUSE_DEFINITIONS.getOrDefault(section, Collections.emptyList()).stream()
+                .map(def -> def.id() + " " + def.title())
+                .toList();
+    }
+
+    private String extractEvidenceSnippet(String originalContent, Set<String> keywords) {
+        if (originalContent == null || originalContent.isBlank() || keywords.isEmpty()) {
+            return null;
+        }
+        for (String line : originalContent.split("\n")) {
+            String lower = line.toLowerCase();
+            if (keywords.stream().anyMatch(lower::contains)) {
+                String trimmed = line.trim();
+                return trimmed.length() > 240 ? trimmed.substring(0, 240) + "..." : trimmed;
+            }
+        }
+        return null;
+    }
+
+    private String sectionSpecificTip(SectionAnalysis.IEEE1058Section section) {
+        return switch (section) {
+            case RISK_MANAGEMENT -> "Include risk register with probability/impact, owners, and mitigation actions.";
+            case MASTER_SCHEDULE -> "Show milestones, dependencies, and critical path dates.";
+            case ORGANIZATION -> "Add RACI or responsibility matrix with escalation paths.";
+            case DOCUMENTATION_PLAN -> "List required deliverables, formats, and review/approval cycles.";
+            case STANDARDS_PRACTICES -> "Cite the exact standards, coding conventions, and QA gates applied.";
+            case BUDGET_RESOURCE -> "Provide estimates, allocations, and burn-rate assumptions.";
+            case REVIEWS_AUDITS -> "Describe review cadence, participants, and entry/exit criteria.";
+            case PROBLEM_RESOLUTION -> "Explain escalation paths, SLAs, and defect management workflow.";
+            case CHANGE_MANAGEMENT -> "Document change control board, request workflow, and impact analysis.";
+            case STAFF_ORGANIZATION -> "List roles, skills, onboarding plans, and backups.";
+            case GLOSSARY_APPENDIX -> "Add key terms, abbreviations, and referenced documents.";
+            case OVERVIEW -> "Clarify objectives, scope, and success criteria.";
+        };
+    }
+
+    private static Map<SectionAnalysis.IEEE1058Section, List<SubclauseDefinition>> buildSubclauseDefinitions() {
+        Map<SectionAnalysis.IEEE1058Section, List<SubclauseDefinition>> map = new EnumMap<>(SectionAnalysis.IEEE1058Section.class);
+
+        map.put(SectionAnalysis.IEEE1058Section.OVERVIEW, List.of(
+                new SubclauseDefinition("1.1", "Purpose & Scope", Set.of("purpose", "scope", "objective"), 5),
+                new SubclauseDefinition("1.2", "Assumptions & Constraints", Set.of("assumption", "constraint", "dependency"), 5)
+        ));
+
+        map.put(SectionAnalysis.IEEE1058Section.DOCUMENTATION_PLAN, List.of(
+                new SubclauseDefinition("2.1", "Deliverables", Set.of("deliverable", "artifact", "submission"), 4),
+                new SubclauseDefinition("2.2", "Standards & Templates", Set.of("template", "standard", "format"), 4),
+                new SubclauseDefinition("2.3", "Review & Approval", Set.of("review", "approval", "sign-off"), 4)
+        ));
+
+        map.put(SectionAnalysis.IEEE1058Section.MASTER_SCHEDULE, List.of(
+                new SubclauseDefinition("3.1", "Milestones", Set.of("milestone", "phase", "checkpoint"), 5),
+                new SubclauseDefinition("3.2", "Dependencies", Set.of("dependency", "precedence", "critical path"), 5),
+                new SubclauseDefinition("3.3", "Resource Loading", Set.of("resource loading", "allocation", "capacity"), 5)
+        ));
+
+        map.put(SectionAnalysis.IEEE1058Section.ORGANIZATION, List.of(
+                new SubclauseDefinition("4.1", "Structure", Set.of("organization", "org chart", "structure"), 4),
+                new SubclauseDefinition("4.2", "Roles & Responsibilities", Set.of("role", "responsibility", "raci"), 4),
+                new SubclauseDefinition("4.3", "Communication", Set.of("communication", "escalation", "meeting"), 3)
+        ));
+
+        map.put(SectionAnalysis.IEEE1058Section.STANDARDS_PRACTICES, List.of(
+                new SubclauseDefinition("5.1", "Engineering Standards", Set.of("standard", "coding", "design"), 4),
+                new SubclauseDefinition("5.2", "Process & QA", Set.of("process", "qa", "review"), 4),
+                new SubclauseDefinition("5.3", "Tools", Set.of("tool", "automation", "platform"), 2)
+        ));
+
+        map.put(SectionAnalysis.IEEE1058Section.RISK_MANAGEMENT, List.of(
+                new SubclauseDefinition("6.1", "Risk Register", Set.of("risk", "register", "probability"), 4),
+                new SubclauseDefinition("6.2", "Mitigation", Set.of("mitigation", "response", "contingency"), 4),
+                new SubclauseDefinition("6.3", "Monitoring", Set.of("monitor", "threshold", "trigger"), 2)
+        ));
+
+        map.put(SectionAnalysis.IEEE1058Section.STAFF_ORGANIZATION, List.of(
+                new SubclauseDefinition("7.1", "Team Composition", Set.of("team", "staffing", "resource"), 3),
+                new SubclauseDefinition("7.2", "Roles & Skills", Set.of("skill", "role", "assignment"), 3),
+                new SubclauseDefinition("7.3", "Training", Set.of("training", "onboarding", "upskilling"), 2)
+        ));
+
+        map.put(SectionAnalysis.IEEE1058Section.BUDGET_RESOURCE, List.of(
+                new SubclauseDefinition("8.1", "Estimates", Set.of("estimate", "budget", "cost"), 4),
+                new SubclauseDefinition("8.2", "Allocation", Set.of("allocation", "fund", "resource"), 3),
+                new SubclauseDefinition("8.3", "Tracking", Set.of("burn", "variance", "tracking"), 3)
+        ));
+
+        map.put(SectionAnalysis.IEEE1058Section.REVIEWS_AUDITS, List.of(
+                new SubclauseDefinition("9.1", "Review Cadence", Set.of("review", "inspection", "audit"), 4),
+                new SubclauseDefinition("9.2", "Entry/Exit Criteria", Set.of("entry", "exit", "criteria"), 3),
+                new SubclauseDefinition("9.3", "Findings Handling", Set.of("finding", "defect", "action"), 3)
+        ));
+
+        map.put(SectionAnalysis.IEEE1058Section.PROBLEM_RESOLUTION, List.of(
+                new SubclauseDefinition("10.1", "Escalation", Set.of("escalation", "tier", "support"), 3),
+                new SubclauseDefinition("10.2", "SLA & Response", Set.of("sla", "response", "turnaround"), 3),
+                new SubclauseDefinition("10.3", "Tracking", Set.of("ticket", "issue", "tracking"), 2)
+        ));
+
+        map.put(SectionAnalysis.IEEE1058Section.CHANGE_MANAGEMENT, List.of(
+                new SubclauseDefinition("11.1", "Change Control Board", Set.of("ccb", "board", "governance"), 3),
+                new SubclauseDefinition("11.2", "Workflow", Set.of("change request", "workflow", "approval"), 4),
+                new SubclauseDefinition("11.3", "Impact Analysis", Set.of("impact", "analysis", "assessment"), 3)
+        ));
+
+        map.put(SectionAnalysis.IEEE1058Section.GLOSSARY_APPENDIX, List.of(
+                new SubclauseDefinition("12.1", "Glossary", Set.of("glossary", "definition", "term"), 4),
+                new SubclauseDefinition("12.2", "References", Set.of("reference", "bibliography", "citation"), 3),
+                new SubclauseDefinition("12.3", "Appendices", Set.of("appendix", "appendices", "annex"), 3)
+        ));
+
+        return map;
+    }
+
+    private record SubclauseResult(double coveragePct, List<String> missingSubclauses, String evidenceSnippet) {}
 }
