@@ -38,6 +38,7 @@ public class SPMPDocument {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnoreProperties({"password", "hibernateLazyInitializer", "handler"})
     private User uploadedBy;
 
     @Column(name = "uploaded_at", nullable = false, updatable = false)
@@ -50,6 +51,7 @@ public class SPMPDocument {
     private LocalDateTime updatedAt;
 
     @OneToOne(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties({"document", "sectionAnalyses", "hibernateLazyInitializer", "handler"})
     private ComplianceScore complianceScore;
 
     private String notes;

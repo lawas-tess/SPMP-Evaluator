@@ -1,9 +1,11 @@
 package com.team02.spmpevaluator.controller;
 
 import com.team02.spmpevaluator.dto.ComplianceReportDTO;
+import com.team02.spmpevaluator.entity.ComplianceScore;
 import com.team02.spmpevaluator.entity.Role;
 import com.team02.spmpevaluator.entity.SPMPDocument;
 import com.team02.spmpevaluator.entity.User;
+import com.team02.spmpevaluator.repository.ComplianceScoreRepository;
 import com.team02.spmpevaluator.service.AuditLogService;
 import com.team02.spmpevaluator.service.ComplianceEvaluationService;
 import com.team02.spmpevaluator.service.SPMPDocumentService;
@@ -37,6 +39,7 @@ public class DocumentController {
     private final DocumentParser documentParser;
     private final UserService userService;
     private final AuditLogService auditLogService;
+    private final ComplianceScoreRepository complianceScoreRepository;
 
     /**
      * Upload an SPMP document.
@@ -85,7 +88,11 @@ public class DocumentController {
             documentService.updateDocumentEvaluation(documentId, "", true);
 
             // Return report
-            ComplianceReportDTO report = evaluationService.convertToDTO(complianceScore);
+            ComplianceReportDTO report = evaluationService.convertToDTO(
+                complianceScore, 
+                document.getId(), 
+                document.getFileName()
+            );
             return ResponseEntity.ok(report);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("Evaluation failed: " + e.getMessage());
@@ -163,15 +170,28 @@ public class DocumentController {
                 return ResponseEntity.badRequest().body("Document has not been evaluated yet");
             }
 
-            if (document.getComplianceScore() == null) {
+            // Eagerly fetch compliance score with section analyses to avoid lazy loading issues
+            ComplianceScore complianceScore = complianceScoreRepository.findByDocumentIdWithSectionAnalyses(documentId)
+                    .orElse(null);
+            
+            if (complianceScore == null) {
                 return ResponseEntity.notFound().build();
             }
 
-            // UC 2.4 Step 5: System tracks view activity
-            String ipAddress = request.getRemoteAddr();
-            auditLogService.logFeedbackView(currentUser.getId(), documentId, ipAddress);
+            // UC 2.4 Step 5: System tracks view activity (non-blocking)
+            try {
+                String ipAddress = request.getRemoteAddr();
+                auditLogService.logFeedbackView(currentUser.getId(), documentId, ipAddress);
+            } catch (Exception auditEx) {
+                // Log but don't block the report retrieval
+                System.err.println("Failed to log audit: " + auditEx.getMessage());
+            }
 
-            ComplianceReportDTO report = evaluationService.convertToDTO(document.getComplianceScore());
+            ComplianceReportDTO report = evaluationService.convertToDTO(
+                complianceScore, 
+                document.getId(), 
+                document.getFileName()
+            );
             return ResponseEntity.ok(report);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

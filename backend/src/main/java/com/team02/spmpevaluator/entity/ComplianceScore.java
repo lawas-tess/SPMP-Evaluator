@@ -1,5 +1,7 @@
 package com.team02.spmpevaluator.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -12,6 +14,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class ComplianceScore {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,6 +22,7 @@ public class ComplianceScore {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "document_id", nullable = false, unique = true)
+    @JsonIgnore
     private SPMPDocument document;
 
     @Column(nullable = false)
@@ -43,6 +47,7 @@ public class ComplianceScore {
     private String summary;
 
     @OneToMany(mappedBy = "complianceScore", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"complianceScore"})
     private List<SectionAnalysis> sectionAnalyses;
 
     @Column(name = "evaluated_at", nullable = false)
@@ -56,6 +61,7 @@ public class ComplianceScore {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewed_by_user_id")
+    @JsonIgnoreProperties({"password", "hibernateLazyInitializer", "handler"})
     private User reviewedBy; // Professor who reviewed
 
     @Column(name = "reviewed_at")

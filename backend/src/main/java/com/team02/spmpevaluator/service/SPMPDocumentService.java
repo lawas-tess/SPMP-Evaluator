@@ -5,6 +5,7 @@ import com.team02.spmpevaluator.entity.SPMPDocument;
 import com.team02.spmpevaluator.entity.User;
 import com.team02.spmpevaluator.repository.ComplianceScoreRepository;
 import com.team02.spmpevaluator.repository.SPMPDocumentRepository;
+import com.team02.spmpevaluator.util.DocumentParser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 public class SPMPDocumentService {
 
     private final SPMPDocumentRepository repository;
+    private final DocumentParser documentParser;
     private final ComplianceScoreRepository complianceScoreRepository;
     private final NotificationService notificationService;
     private static final String UPLOAD_DIR = "uploads/documents/";
@@ -158,12 +160,22 @@ public class SPMPDocumentService {
 
     /**
      * Gets file content as string (for processing).
+     * Uses DocumentParser to properly extract text from PDF/DOCX files.
      */
     public String getDocumentContent(Long documentId) throws IOException {
         SPMPDocument document = repository.findById(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
 
-        return Files.readString(Paths.get(document.getFileUrl()));
+        String filePath = document.getFileUrl();
+        String fileName = document.getFileName().toLowerCase();
+        
+        // Use DocumentParser for PDF and DOCX files
+        if (fileName.endsWith(".pdf") || fileName.endsWith(".docx")) {
+            return documentParser.extractTextFromFile(filePath);
+        }
+        
+        // Fallback to raw read for plain text files
+        return Files.readString(Paths.get(filePath));
     }
 
     /**
