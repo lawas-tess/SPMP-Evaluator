@@ -32,9 +32,10 @@ const SubmissionTracker = ({ onViewReport, onOverrideScore, refreshTrigger }) =>
   const filteredSubmissions = submissions.filter((doc) => {
     if (!searchQuery) return true;
     const search = searchQuery.toLowerCase();
+    const fullName = `${doc.uploadedBy?.firstName || ''} ${doc.uploadedBy?.lastName || ''}`.toLowerCase();
     return (
       doc.fileName?.toLowerCase().includes(search) ||
-      doc.uploadedBy?.name?.toLowerCase().includes(search) ||
+      fullName.includes(search) ||
       doc.uploadedBy?.email?.toLowerCase().includes(search)
     );
   });
@@ -204,7 +205,9 @@ const SubmissionTracker = ({ onViewReport, onOverrideScore, refreshTrigger }) =>
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">
-                          {doc.uploadedBy?.name || 'Unknown'}
+                          {doc.uploadedBy?.firstName && doc.uploadedBy?.lastName
+                            ? `${doc.uploadedBy.firstName} ${doc.uploadedBy.lastName}`
+                            : doc.uploadedBy?.username || 'Unknown'}
                         </p>
                         <p className="text-xs text-gray-500">
                           {doc.uploadedBy?.email || ''}
