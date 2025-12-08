@@ -27,10 +27,30 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // E1: Server Error - Backend is down or unreachable
+    if (!error.response) {
+      // Network error - no response received (backend down, network issue, CORS, etc.)
+      error.message = 'Service Unavailable. Please try again later.';
+      return Promise.reject(error);
+    }
+
+    // Handle 5xx server errors
+    if (error.response?.status >= 500) {
+      error.message = 'Service Unavailable. Please try again later.';
+      return Promise.reject(error);
+    }
+
+    // Only redirect on 401 if NOT on the login/auth page (to allow error display during login)
     if (error.response?.status === 401) {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      const isAuthPage = window.location.pathname === '/' || 
+                         window.location.pathname === '/login' || 
+                         window.location.pathname === '/auth';
+      // Don't redirect if we're on auth page - let the error be displayed
+      if (!isAuthPage) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        window.location.href = '/';
+      }
     }
     return Promise.reject(error);
   }

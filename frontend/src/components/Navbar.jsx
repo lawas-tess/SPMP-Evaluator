@@ -16,9 +16,6 @@ const Navbar = () => {
           <span className="text-gray-700">
             Welcome, <strong>{user?.firstName} {user?.lastName}</strong>
           </span>
-          <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">
-            {user?.role}
-          </span>
           
           {/* Notification Bell - UC 2.8, 2.9: Student notification alerts */}
           <NotificationBell />
