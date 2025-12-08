@@ -338,7 +338,7 @@ POST /api/auth/change-password
 | 4.1 | Calculate Overall Compliance Score | ✅ `ComplianceEvaluationService.java` | ✅ `EvaluationResults.jsx` | HIGH | ✅ DONE |
 | 4.2 | Apply Custom Rubric (Grading Criteria) | ✅ `GradingCriteriaService.java` | ✅ `GradingCriteria.jsx` | HIGH | ✅ DONE |
 | 4.3 | Override AI Results | ✅ `SPMPDocumentService.java` | ✅ `ScoreOverride.jsx` | HIGH | ✅ DONE |
-| 4.4 | Score History Tracking | ⬜ `ComplianceScoreHistory.java` | ⬜ History view | LOW | 🔴 TODO (teammate backlog) |
+| 4.4 | Score History Tracking | ✅ `ComplianceScoreHistory.java` | ✅ History view | LOW | ✅ DONE |
 
 #### Feedback Generation (4.5 - 4.8)
 
@@ -346,8 +346,8 @@ POST /api/auth/change-password
 |-----|----------|---------|----------|----------|--------|
 | 4.5 | View Overall Score | ✅ `ComplianceEvaluationService.java` | ✅ `EvaluationResults.jsx` | HIGH | ✅ DONE |
 | 4.6 | Enhanced Detailed Feedback | ✅ AI feedback via OpenRouter | ✅ Section-by-section display | HIGH | ✅ DONE |
-| 4.7 | Re-evaluation of Documents | ⬜ `SPMPDocumentService.java` | ⬜ Re-evaluate button | MEDIUM | 🔴 TODO (teammate backlog) |
-| 4.8 | Export Reports (PDF/Excel) | ⬜ `ReportExportService.java` | ⬜ Export button | LOW | 🔴 TODO (teammate backlog) |
+| 4.7 | Re-evaluation of Documents | ✅ `DocumentController.java` | ✅ Re-evaluate button | MEDIUM | ✅ DONE |
+| 4.8 | Export Reports (PDF/Excel) | ✅ `ReportExportService.java` | ✅ Export button | LOW | ✅ DONE |
 
 ### Current Implementation
 - ✅ **UC 4.1 Complete:** Overall compliance score calculated using structure + completeness weights
@@ -355,9 +355,12 @@ POST /api/auth/change-password
   - Professors can create custom rubrics with IEEE 1058 section weights
   - Weights must sum to 100%
   - Can save and activate different criteria presets
-- ✅ **UC 4.3 Complete:** Score override modal works with AI-generated scores
+- ✅ **UC 4.3 Complete:** Score override modal works with AI-generated scores with history archiving
+- ✅ **UC 4.4 Complete:** Score history tracking with `ComplianceScoreHistory` entity and API endpoints
 - ✅ **UC 4.5 Complete:** EvaluationResults.jsx displays overall score and compliance status
 - ✅ **UC 4.6 Complete:** Section-by-section analysis with findings and recommendations
+- ✅ **UC 4.7 Complete:** Re-evaluation endpoint with automatic score archiving before re-run
+- ✅ **UC 4.8 Complete:** PDF and Excel export with Apache PDFBox and Apache POI
 
 ### What's Actually Working
 
@@ -466,9 +469,12 @@ public ResponseEntity<?> overrideScore(
 - [x] Section analyses persisted and retrievable via DTOs
 - [x] Feedback text clear and actionable for missing/present sections
 - [x] API returns overall score, per-section scores, compliance flag
-- [ ] Re-evaluation button for already evaluated documents (backlog)
-- [ ] Score history tracking across evaluations (backlog)
-- [ ] Export reports as PDF/Excel (backlog)
+- [x] Re-evaluation button for already evaluated documents
+- [x] Score history tracking across evaluations with `ComplianceScoreHistory` entity
+- [x] Export reports as PDF/Excel with Apache PDFBox and Apache POI
+- [x] Override persistence with automatic score archiving
+- [x] History API endpoint `GET /api/documents/{documentId}/history`
+- [x] Export API endpoints `GET /api/documents/{documentId}/export/{pdf|excel}`
 - [ ] Thresholds (e.g., min compliance) configurable via properties
 - [ ] Unit/integration tests for scoring logic and API responses
 - [ ] Handles re-evaluation idempotently (updates existing scores)

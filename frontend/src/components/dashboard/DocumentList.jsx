@@ -13,6 +13,7 @@ const DocumentList = ({ onViewReport, onReplace, refreshTrigger }) => {
   const [deletingId, setDeletingId] = useState(null);
   const [progressVisible, setProgressVisible] = useState(false);
   const [progressStep, setProgressStep] = useState(0);
+  const [reEvaluatingId, setReEvaluatingId] = useState(null);
 
   const progressSteps = [
     'Queued',
@@ -83,6 +84,41 @@ const DocumentList = ({ onViewReport, onReplace, refreshTrigger }) => {
       }
     } finally {
       setEvaluatingId(null);
+    }
+  };
+
+  const handleReEvaluate = async (documentId) => {
+    setReEvaluatingId(documentId);
+    setProgressVisible(true);
+    setProgressStep(0);
+
+    progressIntervalRef.current = setInterval(() => {
+      setProgressStep((prev) => {
+        const next = prev + 1;
+        return next >= progressSteps.length - 1 ? progressSteps.length - 2 : next;
+      });
+    }, 650);
+
+    try {
+      await documentAPI.reEvaluate(documentId);
+      setProgressStep(progressSteps.length - 1);
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+      progressCloseTimeoutRef.current = setTimeout(() => {
+        setProgressVisible(false);
+        setProgressStep(0);
+      }, 600);
+      await fetchDocuments();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Re-evaluation failed');
+      setProgressVisible(false);
+      setProgressStep(0);
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    } finally {
+      setReEvaluatingId(null);
     }
   };
 
@@ -215,12 +251,29 @@ const DocumentList = ({ onViewReport, onReplace, refreshTrigger }) => {
                   {/* Action Buttons */}
                   <div className="flex gap-2 mt-3">
                     {doc.evaluated ? (
-                      <button
-                        onClick={() => onViewReport && onViewReport(doc)}
-                        className="px-3 py-1.5 text-sm bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center gap-1"
-                      >
-                        <FaEye /> View Report
-                      </button>
+                      <>
+                        <button
+                          onClick={() => onViewReport && onViewReport(doc)}
+                          className="px-3 py-1.5 text-sm bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center gap-1"
+                        >
+                          <FaEye /> View Report
+                        </button>
+                        <button
+                          onClick={() => handleReEvaluate(doc.id)}
+                          disabled={reEvaluatingId === doc.id}
+                          className="px-3 py-1.5 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 flex items-center gap-1 disabled:opacity-50"
+                        >
+                          {reEvaluatingId === doc.id ? (
+                            <>
+                              <FaSpinner className="animate-spin" /> Re-evaluating...
+                            </>
+                          ) : (
+                            <>
+                              <FaSync /> Re-evaluate
+                            </>
+                          )}
+                        </button>
+                      </>
                     ) : (
                       <button
                         onClick={() => handleEvaluate(doc.id)}

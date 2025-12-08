@@ -116,6 +116,8 @@ This module documents all use cases for the SPMP Evaluator system related to **D
 | UC 3.3 | View Parser Feedback | ✅ AI-powered analysis |
 
 **Total: 3/3 Use Cases FULLY IMPLEMENTED ✅**
+<<<<<<< HEAD
+=======
 
 ### Remaining Backlog (for Laborada)
 - [ ] **Upgrade to full AI-driven scoring** — Send each section's extracted text to OpenRouter AI and receive:
@@ -125,6 +127,7 @@ This module documents all use cases for the SPMP Evaluator system related to **D
   - Contextual recommendations ("Consider adding response plans for each risk")
 - [ ] Replace keyword-based coverage scoring in `ComplianceEvaluationService.java` with AI-generated scores
 - [ ] Add caching/rate-limiting for AI calls to avoid quota issues
+>>>>>>> 13db54f5773fd0118a4994ed9a7a71d10fe2b3b6
 
 > **Current State:**
 > - ✅ Backend entities: `ParserConfiguration`, `ParserFeedback`
