@@ -363,7 +363,7 @@ const TaskFormModal = ({ task, onClose, onSuccess }) => {
                 onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
               >
-                <option value="">Select a student (optional)</option>
+                <option value="">Select a student</option>
                 {students.map((student) => (
                   <option key={student.id} value={student.id}>
                     {student.firstName} {student.lastName} ({student.username})
@@ -371,9 +371,6 @@ const TaskFormModal = ({ task, onClose, onSuccess }) => {
                 ))}
               </select>
             )}
-            <p className="text-xs text-gray-500 mt-1">
-              Leave empty to create a general task, or select a specific student.
-            </p>
           </div>
 
           {error && (
