@@ -27,6 +27,19 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // E1: Server Error - Backend is down or unreachable
+    if (!error.response) {
+      // Network error - no response received (backend down, network issue, CORS, etc.)
+      error.message = 'Service Unavailable. Please try again later.';
+      return Promise.reject(error);
+    }
+
+    // Handle 5xx server errors
+    if (error.response?.status >= 500) {
+      error.message = 'Service Unavailable. Please try again later.';
+      return Promise.reject(error);
+    }
+
     // Only redirect on 401 if NOT on the login/auth page (to allow error display during login)
     if (error.response?.status === 401) {
       const isAuthPage = window.location.pathname === '/' || 
