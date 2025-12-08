@@ -243,7 +243,7 @@ const DocumentList = ({ onViewReport, onReplace, refreshTrigger }) => {
                       onClick={() => onReplace && onReplace(doc)}
                       className="px-3 py-1.5 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center gap-1"
                     >
-                      <FaEdit /> Replace
+                      <FaEdit /> Edit
                     </button>
                     
                     <button
