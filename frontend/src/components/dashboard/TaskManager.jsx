@@ -245,14 +245,29 @@ const TaskFormModal = ({ task, onClose, onSuccess }) => {
       return;
     }
 
+    // Validate that a student is selected
+    if (!formData.assignedToId) {
+      setError('Please select a student to assign the task');
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
     try {
+      // Map frontend field names to backend expected names
+      const taskPayload = {
+        title: formData.title,
+        description: formData.description,
+        priority: formData.priority,
+        deadline: formData.dueDate,  // Backend expects 'deadline'
+        assignedToUserId: formData.assignedToId  // Backend expects 'assignedToUserId'
+      };
+
       if (task) {
-        await taskAPI.update(task.id, formData);
+        await taskAPI.update(task.id, taskPayload);
       } else {
-        await taskAPI.create(formData);
+        await taskAPI.create(taskPayload);
       }
       onSuccess();
     } catch (err) {

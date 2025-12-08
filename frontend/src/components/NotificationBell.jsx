@@ -13,9 +13,11 @@ import { notificationAPI } from '../services/apiService';
  */
 const NotificationBell = () => {
   const [notifications, setNotifications] = useState([]);
+  const [allNotifications, setAllNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const dropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
@@ -47,6 +49,27 @@ const NotificationBell = () => {
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     }
+  };
+
+  const fetchAllNotifications = async () => {
+    try {
+      setLoading(true);
+      const response = await notificationAPI.getMyNotifications();
+      setAllNotifications(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch notification history:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewHistory = () => {
+    setShowHistory(true);
+    fetchAllNotifications();
+  };
+
+  const handleBackToUnread = () => {
+    setShowHistory(false);
   };
 
   const handleMarkAsRead = async (notificationId) => {
@@ -138,8 +161,23 @@ const NotificationBell = () => {
         <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
           {/* Header */}
           <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-            <h3 className="font-semibold text-gray-800">Notifications</h3>
-            {notifications.length > 0 && (
+            <div className="flex items-center gap-2">
+              {showHistory && (
+                <button
+                  onClick={handleBackToUnread}
+                  className="text-gray-500 hover:text-gray-700"
+                  title="Back to unread"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              )}
+              <h3 className="font-semibold text-gray-800">
+                {showHistory ? 'Notification History' : 'Notifications'}
+              </h3>
+            </div>
+            {!showHistory && notifications.length > 0 && (
               <button
                 onClick={handleMarkAllAsRead}
                 disabled={loading}
@@ -152,62 +190,124 @@ const NotificationBell = () => {
 
           {/* Notification List */}
           <div className="max-h-96 overflow-y-auto">
-            {notifications.length === 0 ? (
+            {loading ? (
               <div className="px-4 py-8 text-center text-gray-500">
-                <svg 
-                  className="mx-auto h-12 w-12 text-gray-300 mb-2" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={1} 
-                    d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" 
-                  />
+                <svg className="animate-spin mx-auto h-8 w-8 text-purple-600 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <p>No new notifications</p>
+                <p>Loading...</p>
               </div>
-            ) : (
-              notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className="px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
-                  onClick={() => handleMarkAsRead(notification.id)}
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="text-xl">
-                      {getNotificationIcon(notification.type)}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800">
-                        {notification.title}
-                      </p>
-                      <p className="text-sm text-gray-600 truncate">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {formatTime(notification.createdAt)}
-                      </p>
+            ) : showHistory ? (
+              // Show all notifications (history)
+              allNotifications.length === 0 ? (
+                <div className="px-4 py-8 text-center text-gray-500">
+                  <svg 
+                    className="mx-auto h-12 w-12 text-gray-300 mb-2" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={1} 
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" 
+                    />
+                  </svg>
+                  <p>No notification history</p>
+                </div>
+              ) : (
+                allNotifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`px-4 py-3 border-b border-gray-100 ${
+                      notification.read ? 'bg-gray-50' : 'bg-blue-50'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl">
+                        {getNotificationIcon(notification.type)}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className={`text-sm font-medium ${notification.read ? 'text-gray-600' : 'text-gray-800'}`}>
+                            {notification.title}
+                          </p>
+                          {!notification.read && (
+                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                          )}
+                        </div>
+                        <p className={`text-sm truncate ${notification.read ? 'text-gray-500' : 'text-gray-600'}`}>
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {formatTime(notification.createdAt)}
+                        </p>
+                      </div>
                     </div>
                   </div>
+                ))
+              )
+            ) : (
+              // Show unread notifications
+              notifications.length === 0 ? (
+                <div className="px-4 py-8 text-center text-gray-500">
+                  <svg 
+                    className="mx-auto h-12 w-12 text-gray-300 mb-2" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={1} 
+                      d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" 
+                    />
+                  </svg>
+                  <p>No new notifications</p>
                 </div>
-              ))
+              ) : (
+                notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className="px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleMarkAsRead(notification.id)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl">
+                        {getNotificationIcon(notification.type)}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800">
+                          {notification.title}
+                        </p>
+                        <p className="text-sm text-gray-600 truncate">
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {formatTime(notification.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )
             )}
           </div>
 
-          {/* Footer - View All */}
-          {notifications.length > 0 && (
+          {/* Footer - View History */}
+          {!showHistory && (
             <div className="px-4 py-2 border-t border-gray-200 text-center">
               <button 
-                className="text-sm text-blue-600 hover:text-blue-800"
-                onClick={() => {
-                  setIsOpen(false);
-                  // Could navigate to full notifications page if implemented
-                }}
+                className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 mx-auto"
+                onClick={handleViewHistory}
               >
-                View all notifications
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                View History
               </button>
             </div>
           )}
