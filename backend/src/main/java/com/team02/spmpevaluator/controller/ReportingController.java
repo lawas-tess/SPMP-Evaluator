@@ -183,7 +183,7 @@ public class ReportingController {
             taskStats.put("completed", studentTasks.stream().filter(Task::isCompleted).count());
             taskStats.put("pending", studentTasks.stream().filter(t -> !t.isCompleted()).count());
             taskStats.put("overdue", studentTasks.stream()
-                    .filter(t -> !t.isCompleted() && t.getDeadline() != null && t.getDeadline().isBefore(java.time.LocalDate.now()))
+                    .filter(t -> !t.isCompleted() && t.getDeadline() != null && t.getDeadline().isBefore(LocalDateTime.now()))
                     .count());
 
             double completionRate = studentTasks.isEmpty() ? 0 :

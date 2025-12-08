@@ -163,7 +163,8 @@ public class TaskController {
                     taskDTO.getTitle(),
                     taskDTO.getDescription(),
                     taskDTO.getDeadline(),
-                    Task.Priority.valueOf(taskDTO.getPriority().toUpperCase())
+                    Task.Priority.valueOf(taskDTO.getPriority().toUpperCase()),
+                    taskDTO.getAssignedToUserId()
             );
 
             return ResponseEntity.ok(convertToDTO(task));
@@ -261,6 +262,8 @@ public class TaskController {
                 task.isCompleted(),
                 task.getAssignedTo().getId(),
                 task.getAssignedTo().getUsername(),
+                task.getAssignedTo().getFirstName(),
+                task.getAssignedTo().getLastName(),
                 task.getCreatedBy().getId(),
                 task.getCreatedBy().getUsername(),
                 task.getCompletionDate(),

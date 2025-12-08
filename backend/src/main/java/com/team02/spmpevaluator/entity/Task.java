@@ -23,7 +23,7 @@ public class Task {
     private String description;
 
     @Column(nullable = false)
-    private LocalDate deadline;
+    private LocalDateTime deadline;
 
     @Column(name = "is_completed")
     private boolean completed = false;

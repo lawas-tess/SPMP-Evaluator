@@ -14,12 +14,14 @@ public class TaskDTO {
     private Long id;
     private String title;
     private String description;
-    private LocalDate deadline;
+    private LocalDateTime deadline;
     private String priority;
     private String status;
     private boolean completed;
     private Long assignedToUserId;
     private String assignedToUsername;
+    private String assignedToFirstName;
+    private String assignedToLastName;
     private Long createdByUserId;
     private String createdByUsername;
     private LocalDate completionDate;
@@ -31,12 +33,14 @@ public class TaskDTO {
     public TaskDTO(Long id,
                    String title,
                    String description,
-                   LocalDate deadline,
+                   LocalDateTime deadline,
                    String priority,
                    String status,
                    boolean completed,
                    Long assignedToUserId,
                    String assignedToUsername,
+                   String assignedToFirstName,
+                   String assignedToLastName,
                    Long createdByUserId,
                    String createdByUsername,
                    LocalDate completionDate,
@@ -50,6 +54,8 @@ public class TaskDTO {
         this.completed = completed;
         this.assignedToUserId = assignedToUserId;
         this.assignedToUsername = assignedToUsername;
+        this.assignedToFirstName = assignedToFirstName;
+        this.assignedToLastName = assignedToLastName;
         this.createdByUserId = createdByUserId;
         this.createdByUsername = createdByUsername;
         this.completionDate = completionDate;
@@ -80,11 +86,11 @@ public class TaskDTO {
         this.description = description;
     }
 
-    public LocalDate getDeadline() {
+    public LocalDateTime getDeadline() {
         return deadline;
     }
 
-    public void setDeadline(LocalDate deadline) {
+    public void setDeadline(LocalDateTime deadline) {
         this.deadline = deadline;
     }
 
@@ -126,6 +132,22 @@ public class TaskDTO {
 
     public void setAssignedToUsername(String assignedToUsername) {
         this.assignedToUsername = assignedToUsername;
+    }
+
+    public String getAssignedToFirstName() {
+        return assignedToFirstName;
+    }
+
+    public void setAssignedToFirstName(String assignedToFirstName) {
+        this.assignedToFirstName = assignedToFirstName;
+    }
+
+    public String getAssignedToLastName() {
+        return assignedToLastName;
+    }
+
+    public void setAssignedToLastName(String assignedToLastName) {
+        this.assignedToLastName = assignedToLastName;
     }
 
     public Long getCreatedByUserId() {
