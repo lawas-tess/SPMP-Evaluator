@@ -87,7 +87,7 @@ public class AuthController {
             
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(new ErrorResponse("Invalid username or email. Please check your credentials.", 401));
+                        .body(new ErrorResponse("Invalid credentials. Please check your username/email and try again.", 401));
             }
 
             // Authenticate
@@ -100,7 +100,7 @@ public class AuthController {
                 );
             } catch (BadCredentialsException e) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(new ErrorResponse("Incorrect password. Please try again.", 401));
+                        .body(new ErrorResponse("Invalid credentials. Please check your password and try again.", 401));
             }
 
             // Generate JWT token
@@ -117,7 +117,7 @@ public class AuthController {
             ));
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErrorResponse("Invalid credentials", 401));
+                    .body(new ErrorResponse("Invalid credentials. Please check your username/email and password.", 401));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Login failed: " + e.getMessage(), 500));

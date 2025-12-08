@@ -154,6 +154,9 @@ const AuthPage = () => {
               {error && (
                 <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
                   <p className="text-red-700 font-semibold text-sm">{error}</p>
+                  {isLogin && error.toLowerCase().includes('invalid') && (
+                    <p className="text-red-600 text-xs mt-1">Please check your credentials and try again.</p>
+                  )}
                 </div>
               )}
 
