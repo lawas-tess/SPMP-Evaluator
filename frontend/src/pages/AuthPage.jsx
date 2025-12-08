@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AiOutlineEye, AiOutlineEyeInvisible } from 'react-icons/ai';
 import { FaFacebook, FaLinkedin, FaGoogle } from 'react-icons/fa';
@@ -6,11 +6,18 @@ import { useAuth } from '../context/AuthContext.jsx';
 
 const AuthPage = () => {
   const navigate = useNavigate();
-  const { login, register, error, setError } = useAuth();
+  const { login, register, error, setError, isAuthenticated, loading: authLoading } = useAuth();
 
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const [formData, setFormData] = useState({
     username: '',
@@ -43,7 +50,7 @@ const AuthPage = () => {
         });
         console.log('Login response:', response);
         console.log('Navigating to dashboard...');
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       } else {
         // Register - store credentials before clearing form
         const registrationUsername = formData.username;
@@ -75,7 +82,7 @@ const AuthPage = () => {
           password: registrationPassword,
         });
         console.log('Registration + auto-login response:', response);
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       }
     } catch (err) {
       console.error('Auth error:', err);
