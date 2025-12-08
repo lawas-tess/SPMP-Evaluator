@@ -26,7 +26,7 @@ public class TaskService {
      * Creates a new task assigned to a user (UC 2.6).
      * Sends notification to assigned student.
      */
-    public Task createTask(String title, String description, LocalDate deadline,
+    public Task createTask(String title, String description, LocalDateTime deadline,
                           Task.Priority priority, Long assignedToUserId, Long createdByUserId) {
         User assignedTo = userRepository.findById(assignedToUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Assigned user not found"));
@@ -108,7 +108,7 @@ public class TaskService {
      * Notifies assigned student of task update.
      */
     public Task updateTask(Long taskId, String title, String description,
-                          LocalDate deadline, Task.Priority priority) {
+                          LocalDateTime deadline, Task.Priority priority, Long assignedToUserId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Task not found"));
 
@@ -116,6 +116,14 @@ public class TaskService {
         task.setDescription(description);
         task.setDeadline(deadline);
         task.setPriority(priority);
+        
+        // Update assigned user if provided
+        if (assignedToUserId != null) {
+            User assignedTo = userRepository.findById(assignedToUserId)
+                    .orElseThrow(() -> new IllegalArgumentException("Assigned user not found"));
+            task.setAssignedTo(assignedTo);
+        }
+        
         task.setUpdatedAt(LocalDateTime.now());
 
         Task savedTask = taskRepository.save(task);

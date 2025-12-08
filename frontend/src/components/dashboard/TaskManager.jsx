@@ -60,10 +60,12 @@ const TaskManager = ({ refreshTrigger }) => {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'No due date';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -161,9 +163,11 @@ const TaskManager = ({ refreshTrigger }) => {
                     <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                       <span className="flex items-center gap-1">
                         <FaUser className="text-xs" />
-                        {task.assignedTo?.name || 'Unassigned'}
+                        {task.assignedToFirstName && task.assignedToLastName
+                          ? `${task.assignedToFirstName} ${task.assignedToLastName}`
+                          : task.assignedToUsername || 'Unassigned'}
                       </span>
-                      <span>Due: {formatDate(task.dueDate)}</span>
+                      <span>Due: {formatDate(task.deadline)}</span>
                     </div>
                   </div>
                 </div>
@@ -213,8 +217,8 @@ const TaskFormModal = ({ task, onClose, onSuccess }) => {
     title: task?.title || '',
     description: task?.description || '',
     priority: task?.priority || 'MEDIUM',
-    dueDate: task?.dueDate ? task.dueDate.split('T')[0] : '',
-    assignedToId: task?.assignedTo?.id || ''
+    dueDate: task?.deadline ? task.deadline.split('T')[0] : '',
+    assignedToId: task?.assignedToUserId || task?.assignedTo?.id || ''
   });
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
@@ -334,13 +338,13 @@ const TaskFormModal = ({ task, onClose, onSuccess }) => {
             </select>
           </div>
 
-          {/* Due Date */}
+          {/* Due Date & Time */}
           <div className="mb-4">
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Due Date
+              Due Date & Time
             </label>
             <input
-              type="date"
+              type="datetime-local"
               value={formData.dueDate}
               onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
