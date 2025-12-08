@@ -41,6 +41,21 @@ const TaskTracker = ({ refreshTrigger }) => {
     }
   };
 
+  // Toggle task completion status (check/uncheck)
+  const handleToggleTask = async (task) => {
+    setUpdatingTaskId(task.id);
+    try {
+      const newCompleted = !task.completed;
+      const newStatus = newCompleted ? 'COMPLETED' : 'PENDING';
+      await taskAPI.updateStatus(task.id, newStatus, newCompleted);
+      await fetchTasks();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update task');
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  };
+
   const filteredTasks = tasks.filter((task) => {
     if (filter === 'pending') return !task.completed;
     if (filter === 'completed') return task.completed;
@@ -204,15 +219,16 @@ const TaskTracker = ({ refreshTrigger }) => {
               }`}
             >
               <div className="flex items-start gap-3">
-                {/* Status Icon / Checkbox */}
+                {/* Status Icon / Checkbox - Click to toggle completion */}
                 <button
-                  onClick={() => !task.completed && handleCompleteTask(task.id)}
-                  disabled={task.completed || updatingTaskId === task.id}
-                  className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition ${
+                  onClick={() => handleToggleTask(task)}
+                  disabled={updatingTaskId === task.id}
+                  className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition cursor-pointer ${
                     task.completed 
-                      ? 'bg-green-500 border-green-500 text-white cursor-default' 
-                      : 'border-gray-400 hover:border-purple-500 cursor-pointer'
+                      ? 'bg-green-500 border-green-500 text-white hover:bg-green-600' 
+                      : 'border-gray-400 hover:border-purple-500 hover:bg-purple-50'
                   }`}
+                  title={task.completed ? 'Click to mark as pending' : 'Click to mark as completed'}
                 >
                   {updatingTaskId === task.id ? (
                     <FaSpinner className="animate-spin text-xs" />
