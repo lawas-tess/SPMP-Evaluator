@@ -1,371 +1,82 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AiOutlineEye, AiOutlineEyeInvisible } from 'react-icons/ai';
-import { FaFacebook, FaLinkedin, FaGoogle } from 'react-icons/fa';
-import { useAuth } from '../context/AuthContext.jsx';
+// AuthPage.jsx
+import React, { useState, useEffect } from "react";
+import AuthFormContainer from "./AuthFormContainer.jsx";
+
+// Define slides here as they are static data for the UI
+const slides = [
+  "/overview.png", // Example of a dashboard screenshot
+  "/upload.png", // Example of a successful evaluation
+  "/documents.png", // Example of a key chart/graph
+  "/task.png",
+];
 
 const AuthPage = () => {
-  const navigate = useNavigate();
-  const { login, register, error, setError, isAuthenticated, loading: authLoading } = useAuth();
+  const [currentSlide, setCurrentSlide] = useState(0);
 
-  const [isLogin, setIsLogin] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  // Redirect to dashboard if already authenticated
+  // Slideshow interval
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [isAuthenticated, authLoading, navigate]);
+    const slideInterval = setInterval(() => {
+      setCurrentSlide((prevIndex) => (prevIndex + 1) % slides.length);
+    }, 5000);
 
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    role: 'STUDENT',
-  });
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    if (error) setError(null);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      if (isLogin) {
-        // Login
-        const response = await login({
-          username: formData.username,
-          password: formData.password,
-        });
-        console.log('Login response:', response);
-        console.log('Navigating to dashboard...');
-        navigate('/dashboard', { replace: true });
-      } else {
-        // Register - store credentials before clearing form
-        const registrationUsername = formData.username;
-        const registrationPassword = formData.password;
-        
-        await register({
-          username: registrationUsername,
-          email: formData.email,
-          password: registrationPassword,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          role: formData.role,
-        });
-        
-        // Clear form and switch to login
-        setFormData({
-          username: '',
-          email: '',
-          password: '',
-          firstName: '',
-          lastName: '',
-          role: 'STUDENT',
-        });
-        setIsLogin(true);
-        
-        // Auto-login after registration with stored credentials
-        const response = await login({
-          username: registrationUsername,
-          password: registrationPassword,
-        });
-        console.log('Registration + auto-login response:', response);
-        navigate('/dashboard', { replace: true });
-      }
-    } catch (err) {
-      console.error('Auth error:', err);
-      setError(err.response?.data?.message || err.message || 'Authentication failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => clearInterval(slideInterval);
+  }, [slides.length]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-500 via-purple-400 to-blue-300 flex items-center justify-center p-4">
-      {/* Animated background shapes */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-      <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-      <div className="absolute -bottom-8 left-20 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
-
-      <style>{`
-        @keyframes blob {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-      `}</style>
-
+    <div className="min-h-screen bg-gradient-to-br from-background via-background-light to-background-dark flex items-center justify-center p-4">
       {/* Main container */}
-      <div className="w-full max-w-5xl">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-          {/* Left side - Illustration and branding */}
-          <div className="hidden lg:flex flex-col items-center justify-center text-white">
-            <div className="w-full h-80 bg-gradient-to-br from-blue-400 to-purple-500 rounded-3xl shadow-2xl flex items-center justify-center p-8 relative overflow-hidden">
-              {/* Illustration placeholder with icons */}
-              <div className="relative z-10 text-center">
-                <div className="text-6xl mb-4">✓</div>
-                <div className="w-64 h-40 bg-white bg-opacity-20 rounded-2xl backdrop-blur-sm mb-4 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-4xl mb-2">📋</div>
-                    <p className="text-sm">Project Plans</p>
-                  </div>
-                </div>
-                <div className="flex gap-2 justify-center">
-                  <div className="w-12 h-12 bg-white bg-opacity-10 rounded-lg"></div>
-                  <div className="w-12 h-12 bg-white bg-opacity-10 rounded-lg"></div>
-                  <div className="w-12 h-12 bg-white bg-opacity-10 rounded-lg"></div>
-                </div>
-              </div>
-            </div>
-            <h1 className="text-4xl font-bold mt-8 text-shadow">SPMP</h1>
-            <p className="text-lg text-purple-100 mt-2">Evaluator</p>
-          </div>
+      <div className="w-full max-w-7xl">
+        {/* Layout: Left side (4/7) is wider than Right side (3/7) */}
+        <div className="grid grid-cols-1 lg:grid-cols-7 gap-8 items-stretch">
+          {/* Left side - Illustration and branding (WIDER COLUMN - STATIC) */}
+          <div className="hidden lg:block lg:col-span-4" role="region">
+            <div
+              className={`w-full min-h-[40rem] bg-gradient-to-br from-primary-dark to-primary rounded-[40px] shadow-2xl flex flex-col justify-between p-10 relative overflow-hidden text-white`}
+            >
+              {/* Background Pattern Layer */}
+              <div className="absolute inset-0 opacity-15 bg-[url('/path/to/subtle-grid.svg')] z-0 pointer-events-none"></div>
 
-          {/* Right side - Form */}
-          <div className="w-full">
-            <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-10">
-              {/* Header */}
-              <div className="text-center mb-8">
-                <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-                  {isLogin ? 'Welcome Back!' : 'Welcome to SPMP Evaluator!'}
-                </h2>
-                <p className="text-gray-600">
-                  {isLogin
-                    ? 'Sign in to your account'
-                    : 'Register your account'}
+              {/* 1. BRANDING */}
+              <div className="relative z-10 text-center ">
+                <h1 className="text-3xl md:text-4xl font-extrabold tracking-wider">
+                  QuickCheck
+                </h1>
+                <p className="text-xl font-medium opacity-95">
+                  Evaluate SPMP Instantly
                 </p>
               </div>
 
-              {/* Error message */}
-              {error && (
-                <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
-                  <p className="text-red-700 font-semibold text-sm">{error}</p>
-                  {isLogin && error.toLowerCase().includes('invalid') && (
-                    <p className="text-red-600 text-xs mt-1">Please check your credentials and try again.</p>
-                  )}
-                </div>
-              )}
+              {/* 2. SLIDESHOW DISPLAY AREA */}
+              <div className="relative z-10 flex-grow flex items-center justify-center min-h-0 px-3">
+                <img
+                  key={currentSlide}
+                  src={slides[currentSlide]}
+                  className="max-h-full max-w-full object-contain rounded-xl shadow-2xl border-4 border-white/70 transition-opacity duration-700 ease-in-out"
+                  alt={`SPMP Feature Screenshot ${currentSlide + 1}`}
+                />
+              </div>
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-5">
-                {!isLogin && (
-                  <>
-                    {/* Name fields */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          First Name
-                        </label>
-                        <input
-                          type="text"
-                          name="firstName"
-                          value={formData.firstName}
-                          onChange={handleInputChange}
-                          placeholder="John"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Last Name
-                        </label>
-                        <input
-                          type="text"
-                          name="lastName"
-                          value={formData.lastName}
-                          onChange={handleInputChange}
-                          placeholder="Doe"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    {/* Email for signup */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        placeholder="you@example.com"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                        required
-                      />
-                    </div>
-
-                    {/* Role selection */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Role
-                      </label>
-                      <select
-                        name="role"
-                        value={formData.role}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition bg-white"
-                      >
-                        <option value="STUDENT">Student</option>
-                        <option value="PROFESSOR">Professor</option>
-                      </select>
-                    </div>
-                  </>
-                )}
-
-                {/* Username */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {isLogin ? 'Username or Email' : 'Username'}
-                  </label>
-                  <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    placeholder={isLogin ? 'Enter your username' : 'Choose a username'}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                    required
+              {/* 3. NAVIGATION DOTS */}
+              <div className="relative z-10 pt-6 flex justify-center space-x-2">
+                {slides.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentSlide(index)}
+                    className={`h-2 transition-all duration-300 ${
+                      index === currentSlide
+                        ? "w-6 bg-white shadow-md rounded-full"
+                        : "w-2 bg-white/50 hover:bg-white/80 rounded-full"
+                    }`}
+                    aria-label={`Go to slide ${index + 1}`}
                   />
-                </div>
-
-                {/* Password */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      name="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      placeholder={isLogin ? 'Enter your password' : '8+ characters'}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition pr-10"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                    >
-                      {showPassword ? (
-                        <AiOutlineEyeInvisible size={20} />
-                      ) : (
-                        <AiOutlineEye size={20} />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Login forgot password */}
-                {isLogin && (
-                  <div className="flex justify-end">
-                    <a
-                      href="#"
-                      className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-                    >
-                      Forgot password?
-                    </a>
-                  </div>
-                )}
-
-                {/* Submit button */}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 rounded-full transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                >
-                  {loading
-                    ? 'Processing...'
-                    : isLogin
-                    ? 'Login'
-                    : 'Create Account'}
-                </button>
-
-                {/* Social login */}
-                <div className="relative mt-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white text-gray-500">
-                      {isLogin ? 'Or login with' : 'Or create account with'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex gap-4 mt-6 justify-center">
-                  <button
-                    type="button"
-                    className="w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-300 hover:border-purple-500 hover:bg-purple-50 transition"
-                  >
-                    <FaFacebook className="text-blue-600" size={20} />
-                  </button>
-                  <button
-                    type="button"
-                    className="w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-300 hover:border-purple-500 hover:bg-purple-50 transition"
-                  >
-                    <FaLinkedin className="text-blue-700" size={20} />
-                  </button>
-                  <button
-                    type="button"
-                    className="w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-300 hover:border-purple-500 hover:bg-purple-50 transition"
-                  >
-                    <FaGoogle className="text-red-600" size={20} />
-                  </button>
-                </div>
-
-                {/* Toggle login/signup */}
-                <div className="text-center mt-6 pt-6 border-t border-gray-200">
-                  <p className="text-gray-700">
-                    {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsLogin(!isLogin);
-                        setError(null);
-                        setFormData({
-                          username: '',
-                          email: '',
-                          password: '',
-                          firstName: '',
-                          lastName: '',
-                          role: 'STUDENT',
-                        });
-                      }}
-                      className="text-purple-600 hover:text-purple-700 font-semibold"
-                    >
-                      {isLogin ? 'Sign up' : 'Sign in'}
-                    </button>
-                  </p>
-                </div>
-              </form>
+                ))}
+              </div>
             </div>
+          </div>
+
+          {/* Right side - Form Container (NARROWER COLUMN - DYNAMIC CONTENT) */}
+          <div className="w-full lg:col-span-3 h-full">
+            <AuthFormContainer />
           </div>
         </div>
       </div>
