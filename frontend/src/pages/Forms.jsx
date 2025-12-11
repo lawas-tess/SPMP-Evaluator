@@ -49,7 +49,7 @@ export const RegisterForm = ({
     <button
       type="submit"
       disabled={isProcessing}
-      className="w-full bg-gradient-to-r from-accent to-accent-two hover:from-accent-two hover:to-accent-three text-white font-semibold py-3 rounded-full transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+      className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 rounded-full transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
     >
       {isProcessing ? "Processing..." : "Create Account"}
     </button>
@@ -85,7 +85,7 @@ export const LoginForm = ({
     <div className="flex justify-end">
       <a
         href="#"
-        className={`text-sm text-accent hover:text-accent-three font-medium`}
+        className="text-sm text-purple-600 hover:text-purple-700 font-medium"
       >
         Forgot password?
       </a>
@@ -94,7 +94,7 @@ export const LoginForm = ({
     <button
       type="submit"
       disabled={isProcessing}
-      className="w-full bg-gradient-to-r from-accent to-accent-two hover:from-accent-two hover:to-accent-three text-white font-semibold py-3 rounded-full transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+      className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 rounded-full transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
     >
       {isProcessing ? "Processing..." : "Login"}
     </button>

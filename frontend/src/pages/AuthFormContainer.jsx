@@ -131,7 +131,7 @@ const AuthFormContainer = () => {
           <button
             type="button"
             onClick={handleToggleForm}
-            className={`text-accent hover:text-accent-three font-semibold`}
+            className="text-sm text-purple-600 hover:text-purple-700 font-medium"
           >
             {isLogin ? "Sign up" : "Sign in"}
           </button>

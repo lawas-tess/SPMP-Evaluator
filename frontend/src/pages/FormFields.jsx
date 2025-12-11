@@ -12,7 +12,7 @@ export const TextInput = ({ label, name, value, onChange, placeholder }) => (
       value={value}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition"
+      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition pr-10"
       required
     />
   </div>
@@ -30,7 +30,7 @@ export const PasswordInput = ({ value, onChange, show, toggle }) => (
         value={value}
         onChange={onChange}
         placeholder="8+ characters"
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition pr-10"
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition pr-10"
         required
       />
       <button
@@ -55,7 +55,7 @@ export const RoleSelect = ({ value, onChange }) => (
       name="role"
       value={value}
       onChange={onChange}
-      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition bg-white"
+      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition pr-10"
     >
       <option value="STUDENT">Student</option>
       <option value="PROFESSOR">Professor</option>

@@ -23,7 +23,7 @@ const AuthPage = () => {
   }, [slides.length]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background-light to-background-dark flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-300 via-purple-200 to-blue-100 flex items-center justify-center p-4">
       {/* Main container */}
       <div className="w-full max-w-7xl">
         {/* Layout: Left side (4/7) is wider than Right side (3/7) */}
@@ -31,11 +31,12 @@ const AuthPage = () => {
           {/* Left side - Illustration and branding (WIDER COLUMN - STATIC) */}
           <div className="hidden lg:block lg:col-span-4" role="region">
             <div
-              className={`w-full min-h-[40rem] bg-gradient-to-br from-primary-dark to-primary rounded-[40px] shadow-2xl flex flex-col justify-between p-10 relative overflow-hidden text-white`}
+              className={
+                "w-full min-h-[40rem] bg-gradient-to-br from-blue-400 to-purple-500 rounded-[40px] shadow-2xl flex flex-col justify-between p-10 relative overflow-hidden text-white"
+              }
             >
               {/* Background Pattern Layer */}
               <div className="absolute inset-0 opacity-15 bg-[url('/path/to/subtle-grid.svg')] z-0 pointer-events-none"></div>
-
               {/* 1. BRANDING */}
               <div className="relative z-10 text-center ">
                 <h1 className="text-3xl md:text-4xl font-extrabold tracking-wider">
@@ -45,7 +46,6 @@ const AuthPage = () => {
                   Evaluate SPMP Instantly
                 </p>
               </div>
-
               {/* 2. SLIDESHOW DISPLAY AREA */}
               <div className="relative z-10 flex-grow flex items-center justify-center min-h-0 px-3">
                 <img
@@ -55,7 +55,6 @@ const AuthPage = () => {
                   alt={`SPMP Feature Screenshot ${currentSlide + 1}`}
                 />
               </div>
-
               {/* 3. NAVIGATION DOTS */}
               <div className="relative z-10 pt-6 flex justify-center space-x-2">
                 {slides.map((_, index) => (

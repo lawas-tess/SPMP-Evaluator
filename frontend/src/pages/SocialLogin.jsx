@@ -17,22 +17,19 @@ const SocialLogin = ({ isLogin, primaryColor }) => (
     <div className="flex gap-4 mt-6 justify-center">
       <button
         type="button"
-        className="w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-300 hover:border-accent hover:bg-accent-light transition"
-        aria-label="Login with Facebook"
+        className="w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-300 hover:border-purple-500 hover:bg-purple-50 transition"
       >
         <FaFacebook className="text-blue-600" size={20} />
       </button>
       <button
         type="button"
-        className="w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-300 hover:border-accent hover:bg-accent-light transition"
-        aria-label="Login with LinkedIn"
+        className="w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-300 hover:border-purple-500 hover:bg-purple-50 transition"
       >
         <FaLinkedin className="text-blue-700" size={20} />
       </button>
       <button
         type="button"
-        className="w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-300 hover:border-accent hover:bg-accent-light transition"
-        aria-label="Login with Google"
+        className="w-12 h-12 flex items-center justify-center rounded-full border-2 border-gray-300 hover:border-purple-500 hover:bg-purple-50 transition"
       >
         <FaGoogle className="text-red-600" size={20} />
       </button>
