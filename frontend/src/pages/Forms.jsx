@@ -36,15 +36,25 @@ export const RegisterForm = ({
         onChange={handleInputChange}
         placeholder="you@example.com"
       />
-      <RoleSelect value={formData.role} onChange={handleInputChange} />
+
+      <TextInput
+        label="Username"
+        name="username"
+        value={formData.username}
+        onChange={handleInputChange}
+        placeholder="johndoe"
+      />
     </div>
 
-    <PasswordInput
-      value={formData.password}
-      onChange={handleInputChange}
-      show={showPassword}
-      toggle={() => setShowPassword(!showPassword)}
-    />
+    <div className="grid grid-cols-2 gap-4">
+      <RoleSelect value={formData.role} onChange={handleInputChange} />
+      <PasswordInput
+        value={formData.password}
+        onChange={handleInputChange}
+        show={showPassword}
+        toggle={() => setShowPassword(!showPassword)}
+      />
+    </div>
 
     <button
       type="submit"
