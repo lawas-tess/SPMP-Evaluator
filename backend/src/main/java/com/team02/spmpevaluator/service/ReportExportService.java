@@ -92,7 +92,7 @@ public class ReportExportService {
                 content.beginText();
                 content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 14);
                 content.newLineAtOffset(margin, y);
-                content.showText("Overall Score: " + formatScore(report.getOverallScore()) + "%");
+                content.showText("Overall Score: " + Math.round(report.getOverallScore()) + "%");
                 content.endText();
 
                 y -= 20;
@@ -202,7 +202,7 @@ public class ReportExportService {
             header.createCell(1).setCellValue("Value");
 
             rowIdx = writeRow(sheet, rowIdx, "Document", report.getDocumentName());
-            rowIdx = writeRow(sheet, rowIdx, "Overall Score", formatScore(report.getOverallScore()) + "%");
+            rowIdx = writeRow(sheet, rowIdx, "Overall Score", Math.round(report.getOverallScore()) + "%");
             rowIdx = writeRow(sheet, rowIdx, "Structure Score", formatScore(report.getStructureScore()) + "%");
             rowIdx = writeRow(sheet, rowIdx, "Completeness Score", formatScore(report.getCompletenessScore()) + "%");
             rowIdx = writeRow(sheet, rowIdx, "Compliant", report.isCompliant() ? "Yes" : "No");
