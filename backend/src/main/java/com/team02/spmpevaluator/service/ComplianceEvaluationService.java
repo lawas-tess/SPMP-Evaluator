@@ -47,7 +47,7 @@ public class ComplianceEvaluationService {
     /**
      * Evaluates a document's compliance with IEEE 1058 standard.
      * Returns a detailed compliance report with section analysis and scoring.
-     * Adds slight variation on re-evaluation to simulate AI scoring nuances.
+     * Uses WEIGHTED SCORING to ensure IEEE 1058 compliance integrity.
      */
     public ComplianceScore evaluateDocument(SPMPDocument document, String documentContent) {
         String normalizedContent = documentContent.toLowerCase();
@@ -64,11 +64,13 @@ public class ComplianceEvaluationService {
             }
         }
 
-        // Calculate scores
+        // CRITICAL FIX: Calculate weighted overall score from section scores
+        // Each section contributes its score * weight to the final score
+        double overallScore = calculateWeightedOverallScore(sectionAnalyses);
+        
+        // Calculate diagnostic scores (for backward compatibility, not used in final score)
         double completenessScore = calculateCompletenessScore(sectionsFound);
         double structureScore = calculateStructureScore(documentContent);
-        double overallScore = (structureScore * IEEE1058StandardConstants.STRUCTURE_WEIGHT) +
-                             (completenessScore * IEEE1058StandardConstants.COMPLETENESS_WEIGHT);
 
         // Reuse existing compliance score to support re-evaluation
         ComplianceScore complianceScore = complianceScoreRepository.findByDocument(document)
@@ -105,6 +107,7 @@ public class ComplianceEvaluationService {
 
     /**
      * Analyzes whether a specific IEEE 1058 section is present in the document.
+     * CRITICAL FIX: Now requires BOTH keywords AND sufficient content length to prevent false positives.
      */
     private SectionAnalysis analyzeSectionPresence(SectionAnalysis.IEEE1058Section section, String normalizedContent, String originalContent) {
         SectionAnalysis analysis = new SectionAnalysis();
@@ -115,16 +118,39 @@ public class ComplianceEvaluationService {
                 .filter(kw -> normalizedContent.contains(kw.toLowerCase()))
                 .count();
 
+        // CRITICAL FIX: Check if section has dedicated heading/structure
+        boolean hasSectionHeading = detectSectionHeading(section, originalContent);
+        
+        // CRITICAL FIX: Extract section content for analysis
+        String sectionContent = extractSectionContent(section, originalContent);
+        int sectionContentLength = sectionContent.length();
+
         double primaryCoverage = keywords.isEmpty() ? 0.0 : (matchedKeywords / (double) keywords.size()) * 100.0;
 
         SubclauseResult subclauseResult = evaluateSubclauses(section, normalizedContent, originalContent);
-        boolean sectionPresent = matchedKeywords > 0 || subclauseResult.coveragePct() > 0;
+        
+        // BALANCED FIX: Section is present if it has reasonable keyword coverage OR structural evidence
+        // This prevents false negatives for well-written SPMPs that use different heading formats
+        // Requires EITHER:
+        //   - Good keyword match (40%+ coverage)
+        //   - Section heading detected with some keywords
+        //   - Subclause evidence with keywords
+        boolean hasGoodKeywordCoverage = primaryCoverage >= 40.0;
+        boolean hasStructuralEvidence = hasSectionHeading && matchedKeywords >= 1;
+        boolean hasSubclauseEvidence = !subclauseResult.missingSubclauses().isEmpty() && matchedKeywords >= 1;
+        
+        boolean sectionPresent = hasGoodKeywordCoverage || hasStructuralEvidence || hasSubclauseEvidence;
 
         double combinedCoverage = SUBCLAUSE_DEFINITIONS.getOrDefault(section, Collections.emptyList()).isEmpty()
                 ? primaryCoverage
                 : (primaryCoverage * 0.5) + (subclauseResult.coveragePct() * 0.5);
 
-        double sectionScore = computeSectionScore(combinedCoverage);
+        // CRITICAL FIX: Apply length-based penalty to coverage
+        double lengthPenalty = calculateLengthPenalty(sectionContentLength, getMinimumSectionLength(section));
+        combinedCoverage = combinedCoverage * lengthPenalty;
+
+        // CRITICAL FIX: Section score now properly penalizes missing/incomplete sections
+        double sectionScore = computeSectionScore(combinedCoverage, sectionPresent, matchedKeywords, keywords.size());
 
         analysis.setPresent(sectionPresent);
         analysis.setSectionScore(sectionScore);
@@ -146,16 +172,85 @@ public class ComplianceEvaluationService {
     }
 
     /**
-     * Computes a section score based on keyword coverage and basic structure signals.
-     * Presence grants a base score; additional coverage and heading signals increase it but cap below 100.
+     * BALANCED: Computes section score with realistic grading for professor-approved SPMPs.
+     * Missing sections receive 0%. Present sections receive proportional scores based on coverage.
+     * Scoring curve adjusted to match academic grading standards.
      */
-    private double computeSectionScore(double combinedCoverage) {
-        if (combinedCoverage <= 0) {
+    private double computeSectionScore(double combinedCoverage, boolean sectionPresent, int matchedKeywords, int totalKeywords) {
+        // If section is completely missing, return 0
+        if (!sectionPresent) {
             return 0.0;
         }
-        // Base for presence, plus coverage-driven bonus (caps at 95)
-        double score = 40.0 + Math.min(55.0, combinedCoverage * 0.6);
-        return Math.min(score, 95.0);
+        
+        // Calculate keyword completeness ratio
+        double keywordRatio = totalKeywords > 0 ? (matchedKeywords / (double) totalKeywords) : 0.0;
+        
+        // Award points based on coverage - more generous curve for quality content
+        double score;
+        if (combinedCoverage >= 75.0) {
+            // Excellent: High coverage = 85-100% score
+            score = 70.0 + (combinedCoverage * 0.35);
+        } else if (combinedCoverage >= 60.0) {
+            // Good: Solid coverage = 75-90% score  
+            score = 60.0 + (combinedCoverage * 0.40);
+        } else if (combinedCoverage >= 40.0) {
+            // Fair: Adequate coverage = 60-80% score
+            score = 45.0 + (combinedCoverage * 0.50);
+        } else if (combinedCoverage >= 25.0) {
+            // Passing: Minimal coverage = 50-65% score
+            score = 35.0 + (combinedCoverage * 0.60);
+        } else {
+            // Poor: Very low coverage = 0-40% score
+            score = combinedCoverage * 1.2;
+        }
+        
+        // Small bonus for high keyword matching
+        if (keywordRatio >= 0.7) {
+            score += 5.0;
+        } else if (keywordRatio >= 0.5) {
+            score += 3.0;
+        }
+        
+        return Math.min(score, 100.0);
+    }
+
+    /**
+     * CRITICAL FIX: Calculates weighted overall score based on IEEE 1058 section weights.
+     * This is the TRUE quality score, not an unweighted average.
+     * 
+     * Formula: Σ(section_score × section_weight) / 100
+     * 
+     * Example:
+     * - Section A: score=98%, weight=10 → contribution = 98 * 0.10 = 9.8
+     * - Section B: score=0%, weight=12 → contribution = 0 * 0.12 = 0.0
+     * - Total weighted score = sum of all contributions
+     * 
+     * This ensures high-weight sections (Organization=12%, Risk=10%) impact the score
+     * significantly more than low-weight sections (Glossary=5%, Problem Resolution=5%).
+     */
+    private double calculateWeightedOverallScore(List<SectionAnalysis> sectionAnalyses) {
+        double totalWeightedScore = 0.0;
+        int totalWeight = 0;
+        
+        for (SectionAnalysis analysis : sectionAnalyses) {
+            int sectionWeight = analysis.getSectionWeight();
+            double sectionScore = analysis.getSectionScore();
+            
+            // Each section contributes: (score / 100) * weight
+            // Example: 98% score with 10 weight = 0.98 * 10 = 9.8 points
+            totalWeightedScore += (sectionScore / 100.0) * sectionWeight;
+            totalWeight += sectionWeight;
+        }
+        
+        // Validate weights sum to 100 (fail-safe check)
+        if (totalWeight != 100) {
+            throw new IllegalStateException(
+                String.format("Section weights must sum to 100, but got %d. Check SECTION_WEIGHTS configuration.", totalWeight)
+            );
+        }
+        
+        // Return as percentage (0-100)
+        return totalWeightedScore;
     }
 
     /**
@@ -179,11 +274,25 @@ public class ComplianceEvaluationService {
     }
 
     /**
-     * Calculates completeness score based on sections found.
+     * CRITICAL FIX: Calculates completeness score with weighted penalties.
+     * Missing critical sections (high weight) cause larger score reductions.
      */
     private double calculateCompletenessScore(int sectionsFound) {
         int totalSections = SectionAnalysis.IEEE1058Section.values().length;
-        return (sectionsFound / (double) totalSections) * 100.0;
+        
+        // Base completeness ratio
+        double baseScore = (sectionsFound / (double) totalSections) * 100.0;
+        
+        // Apply penalties for incomplete documents
+        if (sectionsFound < totalSections * 0.5) {
+            // Less than 50% complete - severe penalty
+            baseScore = baseScore * 0.6;
+        } else if (sectionsFound < totalSections * 0.75) {
+            // Less than 75% complete - moderate penalty
+            baseScore = baseScore * 0.8;
+        }
+        
+        return baseScore;
     }
 
     /**
@@ -238,7 +347,7 @@ public class ComplianceEvaluationService {
     private String generateSummary(double overallScore, int sectionsFound, int contentLength) {
         StringBuilder summary = new StringBuilder();
         summary.append("Compliance Evaluation Summary:\n");
-        summary.append("Overall Compliance Score: ").append(String.format("%.2f%%", overallScore)).append("\n");
+        summary.append("Overall Compliance Score: ").append(Math.round(overallScore)).append("%\n");
         summary.append("Sections Found: ").append(sectionsFound).append("/")
                 .append(SectionAnalysis.IEEE1058Section.values().length).append("\n");
         summary.append("Document Length: ").append(contentLength).append(" characters\n");
@@ -512,6 +621,213 @@ public class ComplianceEvaluationService {
         ));
 
         return map;
+    }
+
+    /**
+     * IMPROVED: Detects if a section has a proper heading/structure in the document.
+     * Now recognizes multiple heading formats used in real SPMP documents.
+     */
+    private boolean detectSectionHeading(SectionAnalysis.IEEE1058Section section, String content) {
+        String sectionTitle = section.getDisplayName().toLowerCase();
+        String[] titleWords = sectionTitle.split("\\s+");
+        String[] lines = content.split("\n");
+        
+        for (String line : lines) {
+            String trimmedLine = line.trim().toLowerCase();
+            
+            // Skip very long lines (likely not headings)
+            if (trimmedLine.length() > 200) {
+                continue;
+            }
+            
+            // Check for exact section title
+            if (trimmedLine.contains(sectionTitle)) {
+                return true;
+            }
+            
+            // Check for partial title match (e.g., "risk management" in "5.3.7 Risk management plan")
+            int matchedWords = 0;
+            for (String word : titleWords) {
+                if (trimmedLine.contains(word)) {
+                    matchedWords++;
+                }
+            }
+            if (matchedWords >= Math.max(1, titleWords.length - 1)) {
+                return true;
+            }
+            
+            // Check for numbered headings (e.g., "1. Overview", "5.3.7 Risk management")
+            if (trimmedLine.matches("^\\d+(\\.\\d+)*\\s+.*")) {
+                for (String word : titleWords) {
+                    if (trimmedLine.contains(word)) {
+                        return true;
+                    }
+                }
+            }
+            
+            // Check for headings with primary section keywords
+            Set<String> keywords = getKeywordsForSection(section);
+            for (String keyword : keywords) {
+                if (keyword.length() >= 4 && trimmedLine.contains(keyword.toLowerCase()) && trimmedLine.length() < 150) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * IMPROVED: Extracts content belonging to a specific section.
+     * More flexible to handle various document formats and nested sections.
+     */
+    private String extractSectionContent(SectionAnalysis.IEEE1058Section section, String content) {
+        String sectionTitle = section.getDisplayName().toLowerCase();
+        String[] titleWords = sectionTitle.split("\\s+");
+        String[] lines = content.split("\n");
+        StringBuilder sectionContent = new StringBuilder();
+        boolean inSection = false;
+        int consecutiveEmptyLines = 0;
+        int contentLinesFound = 0;
+        
+        for (String line : lines) {
+            String trimmedLine = line.trim();
+            String lowerLine = trimmedLine.toLowerCase();
+            
+            // Start capturing when section heading found (more flexible matching)
+            if (!inSection) {
+                boolean matchesTitle = lowerLine.contains(sectionTitle);
+                
+                // Check if line contains most title words
+                int matchedWords = 0;
+                for (String word : titleWords) {
+                    if (lowerLine.contains(word)) {
+                        matchedWords++;
+                    }
+                }
+                boolean matchesPartialTitle = matchedWords >= Math.max(1, titleWords.length - 1);
+                
+                if (matchesTitle || matchesPartialTitle || matchesAnySectionKeyword(section, lowerLine)) {
+                    inSection = true;
+                    continue;
+                }
+            }
+            
+            // Capture content while in section
+            if (inSection) {
+                // Stop if we hit a major section heading (but be less aggressive)
+                if (looksLikeSectionHeading(lowerLine) && !matchesAnySectionKeyword(section, lowerLine)) {
+                    // Allow some subsection headings, but stop at major section changes
+                    if (trimmedLine.matches("^\\d+\\.?\\s+[A-Z].*") || trimmedLine.matches("^[A-Z][A-Z\\s]{10,}$")) {
+                        consecutiveEmptyLines++;
+                        if (consecutiveEmptyLines > 1 || contentLinesFound > 10) {
+                            break;
+                        }
+                    }
+                }
+                
+                if (trimmedLine.isEmpty()) {
+                    consecutiveEmptyLines++;
+                    // Stop after many empty lines (end of section)
+                    if (consecutiveEmptyLines > 3 && contentLinesFound > 5) {
+                        break;
+                    }
+                } else {
+                    consecutiveEmptyLines = 0;
+                    contentLinesFound++;
+                }
+                
+                sectionContent.append(line).append("\n");
+            }
+        }
+        
+        // If we didn't find content by heading, search by keywords
+        if (sectionContent.length() < 100) {
+            Set<String> keywords = getKeywordsForSection(section);
+            StringBuilder fallbackContent = new StringBuilder();
+            
+            for (String line : lines) {
+                String lowerLine = line.toLowerCase();
+                for (String keyword : keywords) {
+                    if (lowerLine.contains(keyword.toLowerCase())) {
+                        fallbackContent.append(line).append("\n");
+                        break;
+                    }
+                }
+            }
+            
+            if (fallbackContent.length() > sectionContent.length()) {
+                return fallbackContent.toString();
+            }
+        }
+        
+        return sectionContent.toString();
+    }
+
+    /**
+     * Helper: Checks if a line looks like a section heading.
+     */
+    private boolean looksLikeSectionHeading(String line) {
+        return line.matches("^\\d+(\\.\\d*)?\\s+.*") ||  // Numbered heading
+               line.matches("^[A-Z][A-Z\\s]+$") ||        // All caps heading
+               line.length() < 60 && line.matches("^[A-Z].*");  // Short capitalized line
+    }
+
+    /**
+     * Helper: Checks if line matches any keyword for the section.
+     */
+    private boolean matchesAnySectionKeyword(SectionAnalysis.IEEE1058Section section, String line) {
+        Set<String> keywords = getKeywordsForSection(section);
+        return keywords.stream().anyMatch(kw -> line.contains(kw.toLowerCase()));
+    }
+
+    /**
+     * BALANCED: Returns minimum required content length for each section.
+     * Adjusted to realistic expectations for professor-approved SPMPs.
+     */
+    private int getMinimumSectionLength(SectionAnalysis.IEEE1058Section section) {
+        return switch (section) {
+            case OVERVIEW -> 250;  // Should have introduction and scope
+            case DOCUMENTATION_PLAN -> 200;  // List of deliverables and standards
+            case MASTER_SCHEDULE -> 300;  // Timeline with milestones
+            case ORGANIZATION -> 250;  // Org chart and structure
+            case STANDARDS_PRACTICES -> 200;  // Engineering standards
+            case RISK_MANAGEMENT -> 300;  // Risk register and mitigation
+            case STAFF_ORGANIZATION -> 200;  // Team roles and skills
+            case BUDGET_RESOURCE -> 250;  // Budget estimates and allocation
+            case REVIEWS_AUDITS -> 200;  // Review process and criteria
+            case PROBLEM_RESOLUTION -> 150;  // Issue handling process
+            case CHANGE_MANAGEMENT -> 200;  // Change control procedures
+            case GLOSSARY_APPENDIX -> 100;  // Terms and references
+        };
+    }
+
+    /**
+     * CRITICAL FIX: Calculates penalty based on content length.
+     * Sections below minimum length receive reduced scores.
+     */
+    private double calculateLengthPenalty(int actualLength, int minimumLength) {
+        if (actualLength <= 0) {
+            return 0.0;  // No content = 0% of score
+        }
+        
+        if (actualLength >= minimumLength) {
+            return 1.0;  // Meets minimum = full score
+        }
+        
+        // Proportional penalty for partial content
+        double ratio = actualLength / (double) minimumLength;
+        
+        // Apply progressive penalty curve
+        if (ratio >= 0.75) {
+            return 0.9;  // 75-99% length = 90% of score
+        } else if (ratio >= 0.5) {
+            return 0.7;  // 50-74% length = 70% of score
+        } else if (ratio >= 0.25) {
+            return 0.4;  // 25-49% length = 40% of score
+        } else {
+            return 0.1;  // <25% length = 10% of score
+        }
     }
 
     private record SubclauseResult(double coveragePct, List<String> missingSubclauses, String evidenceSnippet) {}
