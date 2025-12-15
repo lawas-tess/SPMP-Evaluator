@@ -138,7 +138,9 @@ const DocumentList = ({ onViewReport, onReplace, refreshTrigger }) => {
 
   const getStatusBadge = (document) => {
     if (document.evaluated) {
-      const score = document.complianceScore?.overallScore || 0;
+      const originalScore = document.complianceScore?.overallScore || 0;
+      const professorOverride = document.complianceScore?.professorOverride;
+      const score = professorOverride != null ? professorOverride : originalScore;
       if (score >= 80) {
         return (
           <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full flex items-center gap-1">
