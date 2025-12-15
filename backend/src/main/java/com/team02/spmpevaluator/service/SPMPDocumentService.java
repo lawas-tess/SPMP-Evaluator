@@ -1,7 +1,6 @@
 package com.team02.spmpevaluator.service;
 
 import com.team02.spmpevaluator.entity.ComplianceScore;
-import com.team02.spmpevaluator.entity.Role;
 import com.team02.spmpevaluator.entity.SPMPDocument;
 import com.team02.spmpevaluator.entity.User;
 import com.team02.spmpevaluator.repository.ComplianceScoreRepository;
@@ -34,7 +33,6 @@ public class SPMPDocumentService {
     private final ComplianceScoreRepository complianceScoreRepository;
     private final NotificationService notificationService;
     private final ComplianceHistoryService complianceHistoryService;
-    private final com.team02.spmpevaluator.repository.UserRepository userRepository;
     private final com.team02.spmpevaluator.repository.ComplianceScoreHistoryRepository historyRepository;
     private static final String UPLOAD_DIR = "uploads/documents/";
     private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -136,28 +134,17 @@ public class SPMPDocumentService {
      * Authorization is handled at the controller/frontend level - students only see their own documents.
      */
     public void deleteDocument(Long documentId, Long userId) throws IOException {
-        System.out.println("SPMPDocumentService.deleteDocument called");
-        System.out.println("  Document ID: " + documentId);
-        System.out.println("  User ID: " + userId);
-        
         SPMPDocument document = repository.findById(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
-
-        System.out.println("  Document found: " + document.getFileName());
-        System.out.println("  File path: " + document.getFileUrl());
         
         // Manually delete history entries (for backward compatibility with old documents)
-        System.out.println("  Deleting history entries...");
         historyRepository.deleteByDocumentId(documentId);
         
         // Delete file from system
-        boolean fileDeleted = Files.deleteIfExists(Paths.get(document.getFileUrl()));
-        System.out.println("  File deleted from disk: " + fileDeleted);
+        Files.deleteIfExists(Paths.get(document.getFileUrl()));
 
         // Delete from database (cascade will handle ComplianceScore and SectionAnalyses)
-        System.out.println("  Deleting from database...");
         repository.delete(document);
-        System.out.println("  Database delete complete");
     }
 
     /**

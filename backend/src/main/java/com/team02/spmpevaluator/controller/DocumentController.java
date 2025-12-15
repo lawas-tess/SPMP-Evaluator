@@ -215,32 +215,22 @@ public class DocumentController {
     @Transactional
     public ResponseEntity<?> deleteDocument(@PathVariable Long documentId) {
         try {
-            System.out.println("DELETE request for document ID: " + documentId);
             String username = getAuthenticatedUsername();
-            System.out.println("Authenticated user: " + username);
-            
             User currentUser = userService.findByUsername(username)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-            System.out.println("Current user ID: " + currentUser.getId());
-            System.out.println("Calling deleteDocument service...");
             
             documentService.deleteDocument(documentId, currentUser.getId());
             
-            System.out.println("Delete successful!");
             return ResponseEntity.ok("Document deleted successfully");
         } catch (IllegalArgumentException e) {
             System.err.println("IllegalArgumentException: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (IOException e) {
             System.err.println("IOException: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Failed to delete document: " + e.getMessage());
         } catch (Exception e) {
             System.err.println("Unexpected exception: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Delete error: " + e.getMessage());
         }
