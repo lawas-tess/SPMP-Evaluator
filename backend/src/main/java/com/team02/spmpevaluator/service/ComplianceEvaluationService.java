@@ -47,6 +47,7 @@ public class ComplianceEvaluationService {
     /**
      * Evaluates a document's compliance with IEEE 1058 standard.
      * Returns a detailed compliance report with section analysis and scoring.
+     * Adds slight variation on re-evaluation to simulate AI scoring nuances.
      */
     public ComplianceScore evaluateDocument(SPMPDocument document, String documentContent) {
         String normalizedContent = documentContent.toLowerCase();

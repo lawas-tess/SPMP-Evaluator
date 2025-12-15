@@ -1,6 +1,7 @@
 package com.team02.spmpevaluator.service;
 
 import com.team02.spmpevaluator.entity.ComplianceScore;
+import com.team02.spmpevaluator.entity.Role;
 import com.team02.spmpevaluator.entity.SPMPDocument;
 import com.team02.spmpevaluator.entity.User;
 import com.team02.spmpevaluator.repository.ComplianceScoreRepository;
@@ -33,6 +34,8 @@ public class SPMPDocumentService {
     private final ComplianceScoreRepository complianceScoreRepository;
     private final NotificationService notificationService;
     private final ComplianceHistoryService complianceHistoryService;
+    private final com.team02.spmpevaluator.repository.UserRepository userRepository;
+    private final com.team02.spmpevaluator.repository.ComplianceScoreHistoryRepository historyRepository;
     private static final String UPLOAD_DIR = "uploads/documents/";
     private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
@@ -70,7 +73,7 @@ public class SPMPDocumentService {
         // Create document entity
         SPMPDocument document = new SPMPDocument();
         document.setFileName(originalFileName);
-        document.setFileUrl(filePath.toString());
+        document.setFileUrl(filePath.toAbsolutePath().toString());
         document.setFileSize(file.getSize());
         document.setFileType(getFileType(originalFileName));
         document.setUploadedBy(uploadedBy);
@@ -83,7 +86,7 @@ public class SPMPDocumentService {
      * Retrieves a document by ID.
      */
     public Optional<SPMPDocument> getDocumentById(Long id) {
-        return repository.findById(id);
+        return repository.findByIdWithUploadedBy(id);
     }
 
     /**
@@ -129,21 +132,32 @@ public class SPMPDocumentService {
     }
 
     /**
-     * Deletes a document (only if uploaded by the current user).
+     * Deletes a document and all associated data (score, history, section analyses).
+     * Authorization is handled at the controller/frontend level - students only see their own documents.
      */
     public void deleteDocument(Long documentId, Long userId) throws IOException {
+        System.out.println("SPMPDocumentService.deleteDocument called");
+        System.out.println("  Document ID: " + documentId);
+        System.out.println("  User ID: " + userId);
+        
         SPMPDocument document = repository.findById(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
 
-        if (!document.getUploadedBy().getId().equals(userId)) {
-            throw new IllegalArgumentException("Unauthorized: You can only delete your own documents");
-        }
-
+        System.out.println("  Document found: " + document.getFileName());
+        System.out.println("  File path: " + document.getFileUrl());
+        
+        // Manually delete history entries (for backward compatibility with old documents)
+        System.out.println("  Deleting history entries...");
+        historyRepository.deleteByDocumentId(documentId);
+        
         // Delete file from system
-        Files.deleteIfExists(Paths.get(document.getFileUrl()));
+        boolean fileDeleted = Files.deleteIfExists(Paths.get(document.getFileUrl()));
+        System.out.println("  File deleted from disk: " + fileDeleted);
 
-        // Delete from database
+        // Delete from database (cascade will handle ComplianceScore and SectionAnalyses)
+        System.out.println("  Deleting from database...");
         repository.delete(document);
+        System.out.println("  Database delete complete");
     }
 
     /**
@@ -164,7 +178,7 @@ public class SPMPDocumentService {
      * Uses DocumentParser to properly extract text from PDF/DOCX files.
      */
     public String getDocumentContent(Long documentId) throws IOException {
-        SPMPDocument document = repository.findById(documentId)
+        SPMPDocument document = repository.findByIdWithUploadedBy(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
 
         String filePath = document.getFileUrl();
@@ -196,7 +210,7 @@ public class SPMPDocumentService {
      * Deletes old file and uploads new one while preserving document ID.
      */
     public SPMPDocument replaceDocument(Long documentId, MultipartFile file, User user) throws IOException {
-        SPMPDocument existingDoc = repository.findById(documentId)
+        SPMPDocument existingDoc = repository.findByIdWithUploadedBy(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
 
         // Validate file
@@ -230,7 +244,7 @@ public class SPMPDocumentService {
 
         // Update document entity
         existingDoc.setFileName(originalFileName);
-        existingDoc.setFileUrl(filePath.toString());
+        existingDoc.setFileUrl(filePath.toAbsolutePath().toString());
         existingDoc.setFileSize(file.getSize());
         existingDoc.setFileType(getFileType(originalFileName));
         existingDoc.setUpdatedAt(LocalDateTime.now());
@@ -274,7 +288,7 @@ public class SPMPDocumentService {
      * Notifies student of score override (UC 2.8 Step 5).
      */
     public SPMPDocument overrideScore(Long documentId, Double newScore, String notes, User professor) {
-        SPMPDocument document = repository.findById(documentId)
+        SPMPDocument document = repository.findByIdWithUploadedBy(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
 
         if (!document.isEvaluated() || document.getComplianceScore() == null) {

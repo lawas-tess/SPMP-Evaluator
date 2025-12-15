@@ -1,6 +1,5 @@
 package com.team02.spmpevaluator.dto;
 
-import com.team02.spmpevaluator.entity.SectionAnalysis;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
