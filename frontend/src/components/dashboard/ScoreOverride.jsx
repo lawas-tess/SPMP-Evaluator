@@ -3,8 +3,12 @@ import { FaSave, FaTimes, FaSpinner, FaExclamationTriangle } from 'react-icons/f
 import { documentAPI } from '../../services/apiService';
 
 const ScoreOverride = ({ document, onClose, onSuccess }) => {
-  const [score, setScore] = useState(document?.complianceScore?.overallScore || 0);
-  const [notes, setNotes] = useState(document?.complianceScore?.notes || '');
+  const originalScore = document?.complianceScore?.overallScore || 0;
+  const professorOverride = document?.complianceScore?.professorOverride;
+  const currentScore = professorOverride != null ? professorOverride : originalScore;
+  
+  const [score, setScore] = useState(currentScore);
+  const [notes, setNotes] = useState(document?.complianceScore?.professorNotes || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -59,9 +63,12 @@ const ScoreOverride = ({ document, onClose, onSuccess }) => {
             <p className="text-sm text-gray-600">Document:</p>
             <p className="font-semibold text-gray-900 truncate">{document?.fileName}</p>
             <p className="text-sm text-gray-500 mt-1">
-              Current Score: <span className={`font-bold ${getScoreColor(document?.complianceScore?.overallScore || 0)}`}>
-                {Math.round(document?.complianceScore?.overallScore || 0)}%
+              Current Score: <span className={`font-bold ${getScoreColor(currentScore)}`}>
+                {Math.round(currentScore)}%
               </span>
+              {professorOverride != null && (
+                <span className="ml-2 text-xs text-orange-600">(Overridden from {Math.round(originalScore)}%)</span>
+              )}
             </p>
           </div>
 

@@ -42,7 +42,9 @@ const SubmissionTracker = ({ onViewReport, onOverrideScore, refreshTrigger }) =>
 
   const getStatusBadge = (document) => {
     if (document.evaluated) {
-      const score = document.complianceScore?.overallScore || 0;
+      const originalScore = document.complianceScore?.overallScore || 0;
+      const professorOverride = document.complianceScore?.professorOverride;
+      const score = professorOverride != null ? professorOverride : originalScore;
       if (score >= 80) {
         return (
           <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full flex items-center gap-1">
@@ -85,7 +87,12 @@ const SubmissionTracker = ({ onViewReport, onOverrideScore, refreshTrigger }) =>
   const evaluatedCount = submissions.filter(d => d.evaluated).length;
   const pendingCount = totalSubmissions - evaluatedCount;
   const avgScore = submissions.filter(d => d.evaluated)
-    .reduce((sum, d) => sum + (d.complianceScore?.overallScore || 0), 0) / (evaluatedCount || 1);
+    .reduce((sum, d) => {
+      const originalScore = d.complianceScore?.overallScore || 0;
+      const professorOverride = d.complianceScore?.professorOverride;
+      const score = professorOverride != null ? professorOverride : originalScore;
+      return sum + score;
+    }, 0) / (evaluatedCount || 1);
 
   if (loading && submissions.length === 0) {
     return (

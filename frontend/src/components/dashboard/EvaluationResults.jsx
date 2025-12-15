@@ -113,7 +113,10 @@ const EvaluationResults = ({ document, onClose }) => {
     );
   }
 
-  const overallScore = report?.overallScore || document?.complianceScore?.overallScore || 0;
+  // Use professor override if available, otherwise use original score
+  const originalScore = report?.overallScore || document?.complianceScore?.overallScore || 0;
+  const professorOverride = report?.professorOverride || document?.complianceScore?.professorOverride;
+  const overallScore = professorOverride != null ? professorOverride : originalScore;
   const sectionAnalyses = report?.sectionAnalyses || [];
 
   return (
@@ -162,6 +165,12 @@ const EvaluationResults = ({ document, onClose }) => {
           <div>
             <h3 className="text-lg font-semibold text-gray-700">Overall Compliance Score</h3>
             <p className="text-sm text-gray-600">Based on IEEE 1058 standard evaluation</p>
+            {professorOverride != null && (
+              <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded">
+                <span>⚠️ Professor Override Applied</span>
+                <span className="text-orange-500">(Original: {Math.round(originalScore)}%)</span>
+              </div>
+            )}
           </div>
           <div className="text-right">
             <div className={`text-5xl font-bold ${getScoreColor(overallScore)}`}>
@@ -173,6 +182,9 @@ const EvaluationResults = ({ document, onClose }) => {
                 {overallScore >= 80 ? 'Compliant' : overallScore >= 50 ? 'Needs Improvement' : 'Non-Compliant'}
               </span>
             </div>
+            {report?.professorNotes && (
+              <p className="text-xs text-gray-600 mt-2 italic max-w-md text-right">"{report.professorNotes}"</p>
+            )}
           </div>
         </div>
       </div>
@@ -322,9 +334,16 @@ const EvaluationResults = ({ document, onClose }) => {
         ) : (
           <div className="space-y-3">
             {history.map((item, index) => {
-              const scoreDiff = index < history.length - 1 
-                ? item.overallScore - history[index + 1].overallScore 
-                : 0;
+              // Use professor override if available, otherwise use original score
+              const originalScore = item.overallScore;
+              const effectiveScore = item.professorOverride != null ? item.professorOverride : originalScore;
+              
+              // Calculate score diff using effective scores
+              const prevItem = history[index + 1];
+              const prevEffectiveScore = prevItem 
+                ? (prevItem.professorOverride != null ? prevItem.professorOverride : prevItem.overallScore)
+                : null;
+              const scoreDiff = prevEffectiveScore != null ? effectiveScore - prevEffectiveScore : 0;
               const isIncrease = scoreDiff > 0;
               const isDecrease = scoreDiff < 0;
               
@@ -354,9 +373,12 @@ const EvaluationResults = ({ document, onClose }) => {
                       <div className="grid grid-cols-3 gap-2 text-sm">
                         <div>
                           <span className="text-gray-500">Overall:</span>
-                          <span className={`ml-1 font-semibold ${getScoreColor(item.overallScore)}`}>
-                            {Math.round(item.overallScore)}%
+                          <span className={`ml-1 font-semibold ${getScoreColor(effectiveScore)}`}>
+                            {Math.round(effectiveScore)}%
                           </span>
+                          {item.professorOverride != null && (
+                            <span className="ml-1 text-xs text-orange-600">(was {Math.round(originalScore)}%)</span>
+                          )}
                         </div>
                         <div>
                           <span className="text-gray-500">Structure:</span>
