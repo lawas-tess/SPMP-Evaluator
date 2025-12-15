@@ -165,7 +165,7 @@ const EvaluationResults = ({ document, onClose }) => {
           </div>
           <div className="text-right">
             <div className={`text-5xl font-bold ${getScoreColor(overallScore)}`}>
-              {overallScore}%
+              {Math.round(overallScore)}%
             </div>
             <div className="flex items-center gap-2 justify-end mt-1">
               {getScoreIcon(overallScore)}

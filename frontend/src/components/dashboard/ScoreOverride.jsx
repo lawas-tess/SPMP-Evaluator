@@ -60,7 +60,7 @@ const ScoreOverride = ({ document, onClose, onSuccess }) => {
             <p className="font-semibold text-gray-900 truncate">{document?.fileName}</p>
             <p className="text-sm text-gray-500 mt-1">
               Current Score: <span className={`font-bold ${getScoreColor(document?.complianceScore?.overallScore || 0)}`}>
-                {document?.complianceScore?.overallScore || 0}%
+                {Math.round(document?.complianceScore?.overallScore || 0)}%
               </span>
             </p>
           </div>
