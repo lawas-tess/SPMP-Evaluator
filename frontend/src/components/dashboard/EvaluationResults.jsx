@@ -165,7 +165,7 @@ const EvaluationResults = ({ document, onClose }) => {
           </div>
           <div className="text-right">
             <div className={`text-5xl font-bold ${getScoreColor(overallScore)}`}>
-              {overallScore}%
+              {Math.round(overallScore)}%
             </div>
             <div className="flex items-center gap-2 justify-end mt-1">
               {getScoreIcon(overallScore)}
@@ -320,22 +320,75 @@ const EvaluationResults = ({ document, onClose }) => {
         {history.length === 0 ? (
           <p className="text-sm text-gray-500">No previous evaluations recorded.</p>
         ) : (
-          <div className="space-y-2">
-            {history.map((item) => (
-              <div key={item.id} className="flex justify-between text-sm border-b border-gray-100 pb-2">
-                <div className="space-y-1">
-                  <p className="font-semibold">Version {item.versionNumber} • {item.source || 'EVALUATION'}</p>
-                  <p className="text-gray-600">Overall: {Math.round(item.overallScore)}% | Structure: {Math.round(item.structureScore)}% | Completeness: {Math.round(item.completenessScore)}%</p>
-                  {item.professorOverride != null && (
-                    <p className="text-gray-600">Override: {Math.round(item.professorOverride)}%</p>
-                  )}
+          <div className="space-y-3">
+            {history.map((item, index) => {
+              const scoreDiff = index < history.length - 1 
+                ? item.overallScore - history[index + 1].overallScore 
+                : 0;
+              const isIncrease = scoreDiff > 0;
+              const isDecrease = scoreDiff < 0;
+              
+              return (
+                <div key={item.id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded">
+                          Version {item.versionNumber}
+                        </span>
+                        <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
+                          item.source === 'OVERRIDE' ? 'bg-orange-100 text-orange-700' :
+                          item.source === 'RE_EVALUATION' ? 'bg-blue-100 text-blue-700' :
+                          'bg-green-100 text-green-700'
+                        }`}>
+                          {item.source || 'EVALUATION'}
+                        </span>
+                        {scoreDiff !== 0 && (
+                          <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
+                            isIncrease ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                          }`}>
+                            {isIncrease ? '↑' : '↓'} {Math.abs(scoreDiff).toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div>
+                          <span className="text-gray-500">Overall:</span>
+                          <span className={`ml-1 font-semibold ${getScoreColor(item.overallScore)}`}>
+                            {Math.round(item.overallScore)}%
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Structure:</span>
+                          <span className="ml-1 font-semibold text-gray-700">
+                            {Math.round(item.structureScore)}%
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Completeness:</span>
+                          <span className="ml-1 font-semibold text-gray-700">
+                            {Math.round(item.completenessScore)}%
+                          </span>
+                        </div>
+                      </div>
+                      {item.professorOverride != null && (
+                        <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-sm">
+                          <span className="font-semibold text-orange-700">Override Score:</span>
+                          <span className="ml-1 text-orange-900">{Math.round(item.professorOverride)}%</span>
+                          {item.professorNotes && (
+                            <p className="text-xs text-orange-600 mt-1">"{item.professorNotes}"</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-gray-500 text-right text-xs ml-4">
+                      <p className="font-semibold">{item.recordedAt ? new Date(item.recordedAt).toLocaleDateString() : ''}</p>
+                      <p>{item.recordedAt ? new Date(item.recordedAt).toLocaleTimeString() : ''}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-gray-500 text-right">
-                  <p>{item.recordedAt ? new Date(item.recordedAt).toLocaleString() : ''}</p>
-                  <p className="text-xs">Evaluated: {item.evaluatedAt ? new Date(item.evaluatedAt).toLocaleString() : '—'}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

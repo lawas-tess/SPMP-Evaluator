@@ -46,19 +46,19 @@ const SubmissionTracker = ({ onViewReport, onOverrideScore, refreshTrigger }) =>
       if (score >= 80) {
         return (
           <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full flex items-center gap-1">
-            <FaCheckCircle /> Compliant ({score}%)
+            <FaCheckCircle /> Compliant ({Math.round(score)}%)
           </span>
         );
       } else if (score >= 50) {
         return (
           <span className="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full flex items-center gap-1">
-            <FaExclamationTriangle /> Needs Work ({score}%)
+            <FaExclamationTriangle /> Needs Work ({Math.round(score)}%)
           </span>
         );
       } else {
         return (
           <span className="px-2 py-1 text-xs font-semibold bg-red-100 text-red-800 rounded-full flex items-center gap-1">
-            <FaExclamationTriangle /> Non-Compliant ({score}%)
+            <FaExclamationTriangle /> Non-Compliant ({Math.round(score)}%)
           </span>
         );
       }

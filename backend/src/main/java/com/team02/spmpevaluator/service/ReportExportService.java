@@ -44,37 +44,65 @@ public class ReportExportService {
 
             float margin = 50;
             float y = page.getMediaBox().getHeight() - margin;
+            int pageNumber = 1;
             PDPageContentStream content = new PDPageContentStream(pdf, page);
 
             try {
+                // Header - Document Title
+                content.beginText();
+                content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 16);
+                content.newLineAtOffset(margin, y);
+                content.showText("SPMP Compliance Report");
+                content.endText();
+                
+                y -= 20;
+                content.beginText();
+                content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
+                content.newLineAtOffset(margin, y);
+                content.showText(report.getDocumentName());
+                content.endText();
+
+                // Draw separator line
+                y -= 15;
+                content.setStrokingColor(0.7f, 0.7f, 0.7f);
+                content.setLineWidth(1f);
+                content.moveTo(margin, y);
+                content.lineTo(page.getMediaBox().getWidth() - margin, y);
+                content.stroke();
+
+                // Overall Score Box with compliance badge
+                y -= 30;
+                String complianceStatus = report.isCompliant() ? "COMPLIANT" : "NON-COMPLIANT";
+                float badgeColor = report.isCompliant() ? 0.2f : 0.8f; // green or red
+                
+                content.setNonStrokingColor(badgeColor, report.isCompliant() ? 0.8f : 0.2f, 0.2f);
+                content.addRect(margin, y - 15, 100, 20);
+                content.fill();
+                
+                content.setNonStrokingColor(1f, 1f, 1f); // white text
+                content.beginText();
+                content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 10);
+                content.newLineAtOffset(margin + 10, y - 10);
+                content.showText(complianceStatus);
+                content.endText();
+                
+                content.setNonStrokingColor(0f, 0f, 0f); // reset to black
+                y -= 30;
+                
                 content.beginText();
                 content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 14);
                 content.newLineAtOffset(margin, y);
-                content.showText("SPMP Compliance Report: " + report.getDocumentName());
+                content.showText("Overall Score: " + Math.round(report.getOverallScore()) + "%");
                 content.endText();
 
-                y -= 25;
+                y -= 20;
                 content.beginText();
-                content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
+                content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
                 content.newLineAtOffset(margin, y);
-                content.showText("Overall Score: " + formatScore(report.getOverallScore()) + "%");
+                content.showText("Structure: " + formatScore(report.getStructureScore()) + "% | Completeness: " + formatScore(report.getCompletenessScore()) + "%");
                 content.endText();
 
-                y -= 18;
-                content.beginText();
-                content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
-                content.newLineAtOffset(margin, y);
-                content.showText("Structure Score: " + formatScore(report.getStructureScore()) + "% | Completeness: " + formatScore(report.getCompletenessScore()) + "%");
-                content.endText();
-
-                y -= 18;
-                content.beginText();
-                content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
-                content.newLineAtOffset(margin, y);
-                content.showText("Compliant: " + (report.isCompliant() ? "Yes" : "No"));
-                content.endText();
-
-                y -= 24;
+                y -= 30;
                 content.beginText();
                 content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
                 content.newLineAtOffset(margin, y);
@@ -82,29 +110,71 @@ public class ReportExportService {
                 content.endText();
 
                 y -= 16;
-                y = writeWrappedText(content, report.getSummary(), margin, y, 12, 14, page.getMediaBox().getWidth() - (2 * margin));
+                y = writeWrappedText(content, report.getSummary(), margin, y, 11, 14, page.getMediaBox().getWidth() - (2 * margin));
 
+                // Section Analyses
                 if (report.getSectionAnalyses() != null && !report.getSectionAnalyses().isEmpty()) {
-                    y -= 8;
+                    y -= 20;
+                    content.beginText();
+                    content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+                    content.newLineAtOffset(margin, y);
+                    content.showText("Section Breakdown:");
+                    content.endText();
+                    
+                    y -= 16;
                     for (var section : report.getSectionAnalyses()) {
                         if (y < 120) {
+                            // Add page number footer
+                            content.beginText();
+                            content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 9);
+                            content.newLineAtOffset(page.getMediaBox().getWidth() / 2 - 10, 30);
+                            content.showText("Page " + pageNumber);
+                            content.endText();
+                            
                             content.close();
                             page = new PDPage(PDRectangle.LETTER);
                             pdf.addPage(page);
                             content = new PDPageContentStream(pdf, page);
                             y = page.getMediaBox().getHeight() - margin;
+                            pageNumber++;
                         }
+                        
+                        // Section header with score badge
+                        double sectionScore = section.getSectionScore();
+                        float boxColor = sectionScore >= 80 ? 0.2f : sectionScore >= 60 ? 0.9f : 0.8f;
+                        
+                        content.setNonStrokingColor(boxColor, sectionScore >= 80 ? 0.8f : sectionScore >= 60 ? 0.7f : 0.2f, 0.2f);
+                        content.addRect(page.getMediaBox().getWidth() - margin - 60, y - 12, 60, 18);
+                        content.fill();
+                        
+                        content.setNonStrokingColor(1f, 1f, 1f);
                         content.beginText();
-                        content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
-                        content.newLineAtOffset(margin, y);
-                        content.showText(section.getSectionName() + " - " + formatScore(section.getSectionScore()) + "%");
+                        content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 10);
+                        content.newLineAtOffset(page.getMediaBox().getWidth() - margin - 50, y - 8);
+                        content.showText(formatScore(sectionScore) + "%");
                         content.endText();
-                        y -= 14;
-                        y = writeWrappedText(content, "Findings: " + safe(section.getFindings()), margin, y, 11, 13, page.getMediaBox().getWidth() - (2 * margin));
-                        y = writeWrappedText(content, "Recommendations: " + safe(section.getRecommendations()), margin, y, 11, 13, page.getMediaBox().getWidth() - (2 * margin));
-                        y -= 10;
+                        
+                        content.setNonStrokingColor(0f, 0f, 0f);
+                        content.beginText();
+                        content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 11);
+                        content.newLineAtOffset(margin, y);
+                        content.showText(section.getSectionName());
+                        content.endText();
+                        
+                        y -= 16;
+                        y = writeWrappedText(content, "Findings: " + safe(section.getFindings()), margin + 5, y, 10, 12, page.getMediaBox().getWidth() - (2 * margin) - 10);
+                        y = writeWrappedText(content, "Recommendations: " + safe(section.getRecommendations()), margin + 5, y, 10, 12, page.getMediaBox().getWidth() - (2 * margin) - 10);
+                        y -= 12;
                     }
                 }
+                
+                // Final page number
+                content.beginText();
+                content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 9);
+                content.newLineAtOffset(page.getMediaBox().getWidth() / 2 - 10, 30);
+                content.showText("Page " + pageNumber);
+                content.endText();
+                
             } finally {
                 content.close();
             }
@@ -132,7 +202,7 @@ public class ReportExportService {
             header.createCell(1).setCellValue("Value");
 
             rowIdx = writeRow(sheet, rowIdx, "Document", report.getDocumentName());
-            rowIdx = writeRow(sheet, rowIdx, "Overall Score", formatScore(report.getOverallScore()) + "%");
+            rowIdx = writeRow(sheet, rowIdx, "Overall Score", Math.round(report.getOverallScore()) + "%");
             rowIdx = writeRow(sheet, rowIdx, "Structure Score", formatScore(report.getStructureScore()) + "%");
             rowIdx = writeRow(sheet, rowIdx, "Completeness Score", formatScore(report.getCompletenessScore()) + "%");
             rowIdx = writeRow(sheet, rowIdx, "Compliant", report.isCompliant() ? "Yes" : "No");

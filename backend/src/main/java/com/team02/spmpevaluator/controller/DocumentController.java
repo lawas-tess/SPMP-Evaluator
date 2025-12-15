@@ -21,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -78,6 +79,7 @@ public class DocumentController {
      * Evaluate an uploaded document against IEEE 1058 standard.
      */
     @PostMapping("/{documentId}/evaluate")
+    @Transactional
     public ResponseEntity<?> evaluateDocument(@PathVariable Long documentId) {
         try {
             // Get document
@@ -133,6 +135,7 @@ public class DocumentController {
      * Get a specific document (for professors to view student submissions).
      */
     @GetMapping("/{documentId}")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getDocument(@PathVariable Long documentId) {
         try {
             SPMPDocument document = documentService.getDocumentById(documentId)
@@ -206,22 +209,30 @@ public class DocumentController {
     }
 
     /**
-     * Delete a document (only owners or admins).
+     * Delete a document.
      */
     @DeleteMapping("/{documentId}")
+    @Transactional
     public ResponseEntity<?> deleteDocument(@PathVariable Long documentId) {
         try {
             String username = getAuthenticatedUsername();
             User currentUser = userService.findByUsername(username)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
+            
             documentService.deleteDocument(documentId, currentUser.getId());
+            
             return ResponseEntity.ok("Document deleted successfully");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+            System.err.println("IllegalArgumentException: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (IOException e) {
+            System.err.println("IOException: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Failed to delete document: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Unexpected exception: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Delete error: " + e.getMessage());
         }
     }
 
@@ -382,6 +393,7 @@ public class DocumentController {
      * Re-evaluate a document even if it was already evaluated.
      */
     @PostMapping("/{documentId}/re-evaluate")
+    @Transactional
     public ResponseEntity<?> reEvaluateDocument(@PathVariable Long documentId) {
         try {
             // Get document
@@ -389,7 +401,7 @@ public class DocumentController {
                     .orElseThrow(() -> new IllegalArgumentException("Document not found"));
 
             // Archive existing score BEFORE loading it into the evaluation service
-            ComplianceScore existingScore = complianceScoreRepository.findByDocumentId(documentId).orElse(null);
+            ComplianceScore existingScore = complianceScoreRepository.findByDocumentIdWithDocument(documentId).orElse(null);
             if (existingScore != null) {
                 // Create history entry from the existing score (without fetching section analyses)
                 complianceHistoryService.archiveScore(existingScore, "RE_EVALUATION", getCurrentUserId());
