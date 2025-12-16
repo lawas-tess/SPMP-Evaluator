@@ -116,36 +116,97 @@ This module documents all use cases for the SPMP Evaluator system related to **D
 | UC 3.3 | View Parser Feedback | ✅ AI-powered analysis |
 
 **Total: 3/3 Use Cases FULLY IMPLEMENTED ✅**
-<<<<<<< HEAD
-=======
 
-### Remaining Backlog (for Laborada)
-- [ ] **Upgrade to full AI-driven scoring** — Send each section's extracted text to OpenRouter AI and receive:
-  - Completeness assessment ("Is this section complete?")
-  - Quality score (0-100 based on IEEE 1058 compliance, clarity, depth)
-  - Specific missing elements ("Lacks mitigation strategies for identified risks")
-  - Contextual recommendations ("Consider adding response plans for each risk")
-- [ ] Replace keyword-based coverage scoring in `ComplianceEvaluationService.java` with AI-generated scores
-- [ ] Add caching/rate-limiting for AI calls to avoid quota issues
->>>>>>> 13db54f5773fd0118a4994ed9a7a71d10fe2b3b6
+### Current Architecture
+
+**Current Implementation (Hybrid Approach):**
+
+1. **Document Parsing - Keyword-Based** ✅
+   - `DocumentParser.java` - Extracts text from PDF/DOCX using Apache PDFBox + Apache POI
+   - `IEEE1058StandardConstants.java` - Defines IEEE 1058 section keywords
+   - Pattern matching and keyword detection for clause identification
+
+2. **Compliance Scoring - Keyword-Based** ✅
+   - `ComplianceEvaluationService.java` - Deterministic scoring using weighted keywords
+   - Calculates section coverage percentages (0-100%) based on keyword matches
+   - Fast, deterministic, and consistent scoring
+
+3. **AI Feedback Generation - OpenRouter (Optional)** ✅
+   - `OpenRouterService.java` - AI model: `amazon/nova-lite-v1:free`
+   - Generates human-readable recommendations and missing clause analysis
+   - Currently used for supplementary feedback only, not main scoring
+   - Falls back to mock data if API key not configured
+
+### Architecture Diagram
+
+```
+Student Upload (PDF/DOCX)
+         ↓
+[DocumentParser.java]
+  Text Extraction
+         ↓
+[IEEE1058StandardConstants.java]
+  Pattern Matching
+         ↓
+[ComplianceEvaluationService.java]
+  Keyword-Based Scoring (0-100%)
+         ↓
+  Main Score ✅
+  (Deterministic)
+         ↓
+[OpenRouterService.java] (Optional)
+  AI Recommendations
+         ↓
+[ParserFeedbackService.java]
+  Combine Score + Recommendations
+         ↓
+Feedback Display (Score + AI insights)
+```
+
+### Why Keyword-Based for Scoring?
+
+- ✅ **Deterministic** - Same document always gets same score
+- ✅ **Fast** - No API calls, instant feedback
+- ✅ **Consistent** - IEEE 1058 weighted scoring
+- ✅ **Reliable** - No API quota issues
+- ✅ **Transparent** - Clear why sections scored low
+
+### Why OpenRouter for Recommendations?
+
+- ✅ **Natural language** - "Consider adding risk mitigation strategies..."
+- ✅ **Context-aware** - Understands document content
+- ✅ **Flexible** - AI can suggest contextual improvements
+- ✅ **Optional** - Can fall back to template recommendations
+
+---
+
+## Implementation Summary
+
+| Use Case | Description | Implementation | Status |
+|:---------|:------------|:---------------:|:------:|
+| UC 3.1 | Upload SPMP Document | PDF/DOCX extraction | ✅ |
+| UC 3.2 | Configure Parser Module | Keyword weights config | ✅ |
+| UC 3.3 | View Parser Feedback | Keyword scoring + AI recommendations | ✅ |
 
 > **Current State:**
-> - ✅ Backend entities: `ParserConfiguration`, `ParserFeedback`
+> - ✅ Backend entities: `ParserConfiguration`, `ParserFeedback`, `SectionAnalysis`
 > - ✅ Repository interfaces: CRUD operations for configurations and feedback
-> - ✅ Service layer: Configuration management, AI-powered feedback generation
+> - ✅ Service layer: Configuration management, keyword-based evaluation, optional AI feedback
 > - ✅ REST API: `/api/parser/*` endpoints for config and feedback
 > - ✅ Frontend UI: Parser Configuration component for professors
 > - ✅ Frontend UI: Parser Feedback viewer for compliance scores
 > - ✅ Default IEEE 1058 configuration with all standard clauses
 >
-> **AI Integration Complete:**
+> **Parsing & Scoring:**
 > - ✅ `DocumentParser.java` - PDF/DOCX text extraction (Apache PDFBox + Apache POI)
 > - ✅ `IEEE1058StandardConstants.java` - Section keywords and structure definitions
-> - ✅ `OpenRouterService.java` - AI-based IEEE 1058 compliance analysis
-> - ✅ `ParserFeedbackService.java` - Integrated with OpenRouter AI
-> - ✅ `ComplianceEvaluationService.java` - Keyword-based scoring logic
+> - ✅ `ComplianceEvaluationService.java` - Keyword-based weighted scoring logic
+>
+> **AI Integration (Optional):**
+> - ✅ `OpenRouterService.java` - AI-based recommendations via OpenRouter API
+> - ✅ `ParserFeedbackService.java` - Integrates keyword score with AI recommendations
 >
 > **Configuration:**
-> - API Provider: OpenRouter
-> - Model: `amazon/nova-lite-v1:free`
-> - Fallback: Mock data generation if AI unavailable
+> - Scoring Provider: Keyword-based (deterministic)
+> - Recommendations Provider: OpenRouter (`amazon/nova-lite-v1:free`)
+> - Fallback: Mock recommendations if API unavailable
