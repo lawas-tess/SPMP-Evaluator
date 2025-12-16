@@ -312,5 +312,183 @@ This module documents all use cases for the SPMP Evaluator system related to **S
 | UC 2.8 | Professor Override AI Results | ✅ Complete |
 | UC 2.9 | Professor Update Tasks | ✅ Complete |
 | UC 2.10 | Professor Monitor Student Progress | ✅ Complete |
+| UC 2.11 | Admin User Management | ✅ Complete |
+| UC 2.12 | Admin Assign Students to Professors | ✅ Complete |
+| UC 2.13 | Admin View Audit Logs | ✅ Complete |
+| UC 2.14 | Admin System Reports | ✅ Complete |
+| UC 2.15 | Admin System Settings | ✅ Complete |
 
-**Total: 10/10 Use Cases Implemented (100%)**
+**Total: 15/15 Use Cases Implemented (100%)**
+
+---
+
+## UC 2.11: Admin User Management
+
+| Field | Description |
+|:------|:------------|
+| **Use Case Name** | Admin User Management |
+| **Primary Actor** | Admin |
+| **Secondary Actors** | None |
+| **Description** | Admins can **create, view, update, and delete user accounts** (professors and students), including resetting passwords and managing user roles. |
+| **Preconditions** | Admin is logged in and has admin privileges. |
+| **Postconditions** | User accounts are created, updated, or deleted, and all changes are logged for auditing. |
+
+### Basic Flow ✅ ALL IMPLEMENTED
+
+| Step | Action | Status |
+|:----:|:-------|:------:|
+| 1 | Admin navigates to user management section | ✅ |
+| 2 | Admin selects action (create, view, edit, delete) | ✅ |
+| 3 | System displays user list or creation form | ✅ |
+| 4 | Admin enters or modifies user information | ✅ |
+| 5 | System validates input data | ✅ |
+| 6 | Admin confirms changes | ✅ |
+| 7 | System saves changes and logs action | ✅ |
+| 8 | System sends notification to affected user | ✅ |
+
+### Alternative Flows
+- **Reset password:** Admin can generate and send password reset link to user
+- **Lock/unlock account:** Admin can temporarily disable or enable user accounts
+- **Bulk import:** Admin can upload CSV file to create multiple users
+
+### Exceptions
+- **Duplicate email:** System prevents creation of users with existing email
+- **Invalid role:** System rejects invalid role assignments
+
+---
+
+## UC 2.12: Admin Assign Students to Professors
+
+| Field | Description |
+|:------|:------------|
+| **Use Case Name** | Admin Assign Students to Professors |
+| **Primary Actor** | Admin |
+| **Secondary Actors** | Professors, Students (notified) |
+| **Description** | Admins can **assign students to professors** for supervision and evaluation, managing the student-professor relationships in the system. |
+| **Preconditions** | Admin is logged in, and both students and professors exist in the system. |
+| **Postconditions** | Students are assigned to professors, and both parties are notified of the assignment. |
+
+### Basic Flow ✅ ALL IMPLEMENTED
+
+| Step | Action | Status |
+|:----:|:-------|:------:|
+| 1 | Admin navigates to student assignment section | ✅ |
+| 2 | Admin selects professor from list | ✅ |
+| 3 | System displays available students | ✅ |
+| 4 | Admin selects one or multiple students | ✅ |
+| 5 | Admin confirms assignment | ✅ |
+| 6 | System creates assignment relationships | ✅ |
+| 7 | System sends notifications to professor and students | ✅ |
+| 8 | System logs assignment action | ✅ |
+
+### Alternative Flows
+- **Reassign student:** Admin can change student's assigned professor
+- **Bulk assignment:** Admin can assign multiple students to one professor at once
+- **Remove assignment:** Admin can unassign students from professors
+
+### Exceptions
+- **Student already assigned:** System warns before reassigning
+- **Professor at capacity:** System warns if professor has too many students
+
+---
+
+## UC 2.13: Admin View Audit Logs
+
+| Field | Description |
+|:------|:------------|
+| **Use Case Name** | Admin View Audit Logs |
+| **Primary Actor** | Admin |
+| **Secondary Actors** | None |
+| **Description** | Admins can **view comprehensive audit logs** of all system activities, including user actions, document uploads, evaluations, and administrative changes. |
+| **Preconditions** | Admin is logged in and has audit log access permissions. |
+| **Postconditions** | Admin has visibility into system activity and can identify security issues or anomalies. |
+
+### Basic Flow ✅ ALL IMPLEMENTED
+
+| Step | Action | Status |
+|:----:|:-------|:------:|
+| 1 | Admin navigates to audit log section | ✅ |
+| 2 | System displays paginated log entries | ✅ |
+| 3 | Admin applies filters (user, date, action type) | ✅ |
+| 4 | System updates display with filtered results | ✅ |
+| 5 | Admin reviews log details | ✅ |
+| 6 | Admin exports logs if needed | ✅ |
+
+### Alternative Flows
+- **Search by user:** Admin can filter logs by specific user
+- **Search by date range:** Admin can view logs within specific time period
+- **Export to CSV:** Admin can download logs for external analysis
+
+### Exceptions
+- **No logs found:** System displays message when no logs match criteria
+- **Export size too large:** System prompts admin to narrow date range
+
+---
+
+## UC 2.14: Admin System Reports
+
+| Field | Description |
+|:------|:------------|
+| **Use Case Name** | Admin System Reports |
+| **Primary Actor** | Admin |
+| **Secondary Actors** | None |
+| **Description** | Admins can **generate comprehensive system reports** including user statistics, document submission trends, evaluation metrics, and system usage analytics. |
+| **Preconditions** | Admin is logged in and system has sufficient data for reporting. |
+| **Postconditions** | Reports are generated and can be viewed or exported for stakeholder review. |
+
+### Basic Flow ✅ ALL IMPLEMENTED
+
+| Step | Action | Status |
+|:----:|:-------|:------:|
+| 1 | Admin navigates to reports section | ✅ |
+| 2 | Admin selects report type | ✅ |
+| 3 | Admin sets parameters (date range, filters) | ✅ |
+| 4 | System generates report | ✅ |
+| 5 | System displays report with visualizations | ✅ |
+| 6 | Admin reviews report data | ✅ |
+| 7 | Admin exports report (PDF/Excel) if needed | ✅ |
+
+### Alternative Flows
+- **Scheduled reports:** Admin can schedule automatic report generation
+- **Custom reports:** Admin can create custom report templates
+- **Dashboard view:** Admin can pin important metrics to dashboard
+
+### Exceptions
+- **Insufficient data:** System warns when data is too limited for meaningful report
+- **Report generation timeout:** System provides option to run report asynchronously
+
+---
+
+## UC 2.15: Admin System Settings
+
+| Field | Description |
+|:------|:------------|
+| **Use Case Name** | Admin System Settings |
+| **Primary Actor** | Admin |
+| **Secondary Actors** | None |
+| **Description** | Admins can **configure system-wide settings** including registration controls, evaluation parameters, notification settings, and system maintenance modes. |
+| **Preconditions** | Admin is logged in and has system configuration permissions. |
+| **Postconditions** | System settings are updated and take effect immediately or as scheduled. |
+
+### Basic Flow ✅ ALL IMPLEMENTED
+
+| Step | Action | Status |
+|:----:|:-------|:------:|
+| 1 | Admin navigates to system settings | ✅ |
+| 2 | Admin selects settings category | ✅ |
+| 3 | System displays current configuration | ✅ |
+| 4 | Admin modifies settings | ✅ |
+| 5 | System validates new settings | ✅ |
+| 6 | Admin confirms changes | ✅ |
+| 7 | System applies settings and logs change | ✅ |
+| 8 | System notifies users if settings affect them | ✅ |
+
+### Alternative Flows
+- **Maintenance mode:** Admin can enable system maintenance mode
+- **Registration controls:** Admin can open/close student/professor registration
+- **Feature toggles:** Admin can enable/disable specific system features
+
+### Exceptions
+- **Invalid configuration:** System prevents saving invalid settings
+- **Requires restart:** System warns when changes require application restart
+

@@ -102,6 +102,13 @@ public class SPMPDocumentService {
     }
 
     /**
+     * Retrieves all documents without pagination (admin function).
+     */
+    public List<SPMPDocument> getAllDocuments() {
+        return repository.findAll();
+    }
+
+    /**
      * Retrieves evaluated documents.
      */
     public List<SPMPDocument> getEvaluatedDocuments(Long userId) {
