@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext.jsx';
 import Navbar from '../components/Navbar.jsx';
 import { 
   FaFileUpload, FaChartBar, FaTasks, FaUsers, FaEye,
-  FaHome, FaClipboardList, FaUserGraduate, FaCog, FaListAlt
+  FaHome, FaClipboardList, FaUserGraduate, FaCog, FaListAlt,
+  FaUserShield, FaHistory, FaCogs
 } from 'react-icons/fa';
 
 // Import Dashboard Components
@@ -20,7 +21,11 @@ import {
   StudentList,
   FileReplaceModal,
   ParserConfiguration,
-  ParserFeedback
+  ParserFeedback,
+  AdminDashboard,
+  UserManagement,
+  StudentAssignment,
+  AuditLogViewer
 } from '../components/dashboard';
 
 const Dashboard = () => {
@@ -38,6 +43,7 @@ const Dashboard = () => {
 
   const isStudent = user?.role === 'STUDENT';
   const isProfessor = user?.role === 'PROFESSOR';
+  const isAdmin = user?.role === 'ADMIN';
 
   const triggerRefresh = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);
@@ -62,7 +68,16 @@ const Dashboard = () => {
     { id: 'parser', label: 'Parser Configuration', icon: FaCog },
   ];
 
-  const tabs = isProfessor ? professorTabs : studentTabs;
+  // Admin Navigation Tabs
+  const adminTabs = [
+    { id: 'overview', label: 'Overview', icon: FaHome },
+    { id: 'users', label: 'User Management', icon: FaUserShield },
+    { id: 'assignments', label: 'Student Assignment', icon: FaUsers },
+    { id: 'audit', label: 'Audit Logs', icon: FaHistory },
+    { id: 'settings', label: 'System Settings', icon: FaCogs },
+  ];
+
+  const tabs = isAdmin ? adminTabs : (isProfessor ? professorTabs : studentTabs);
 
   // Handler for viewing evaluation report
   const handleViewReport = (document) => {
@@ -89,7 +104,14 @@ const Dashboard = () => {
   };
 
   // Render Overview Stats
-  const renderOverview = () => (
+  const renderOverview = () => {
+    // Admin Overview
+    if (isAdmin) {
+      return <AdminDashboard onTabChange={setActiveTab} />;
+    }
+
+    // Student/Professor Overview
+    return (
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-lg p-8 text-white">
@@ -239,7 +261,8 @@ const Dashboard = () => {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   // Render Content Based on Active Tab
   const renderContent = () => {
@@ -327,7 +350,7 @@ const Dashboard = () => {
       case 'students':
         return (
           <StudentList
-            onViewProgress={handleViewStudentProgress}
+            onSelectStudent={handleViewStudentProgress}
             refreshTrigger={refreshTrigger}
           />
         );
@@ -342,6 +365,26 @@ const Dashboard = () => {
       case 'parser':
         return (
           <ParserConfiguration />
+        );
+
+      // Admin tabs
+      case 'users':
+        return <UserManagement refreshTrigger={refreshTrigger} />;
+      
+      case 'assignments':
+        return <StudentAssignment refreshTrigger={refreshTrigger} />;
+      
+      case 'audit':
+        return <AuditLogViewer />;
+      
+      case 'settings':
+        return (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <FaCogs className="text-purple-600" /> System Settings
+            </h3>
+            <p className="text-gray-600">System settings management coming soon...</p>
+          </div>
         );
 
       default:

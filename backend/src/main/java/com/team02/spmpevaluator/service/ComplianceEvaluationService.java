@@ -831,4 +831,11 @@ public class ComplianceEvaluationService {
     }
 
     private record SubclauseResult(double coveragePct, List<String> missingSubclauses, String evidenceSnippet) {}
+
+    /**
+     * Get all compliance evaluations (admin function).
+     */
+    public List<ComplianceScore> getAllEvaluations() {
+        return complianceScoreRepository.findAll();
+    }
 }

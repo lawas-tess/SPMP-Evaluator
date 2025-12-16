@@ -108,10 +108,10 @@ POST /api/auth/change-password
 
 ## Module 2: Role-Based User Interface Transactions
 **Branch:** `feature/Lapure`  
-**Assigned To:** Lapure, Jessie Noel  
-**Status:** ✅ FULLY IMPLEMENTED 
+**Assigned To:** Lapure, Jessie Noel (UC 2.1-2.10) + Team (UC 2.11-2.15 Admin Features)  
+**Status:** ✅ Core Features Complete | ❌ Admin Features Pending
 
-### Use Cases (2.1 - 2.10)
+### Use Cases (2.1 - 2.15)
 
 #### Student Role (2.1 - 2.5)
 
@@ -244,6 +244,211 @@ POST /api/auth/change-password
 - [x] **NEW: Notification system for score override and task updates (UC 2.8, 2.9)**
 - [x] **NEW: Activity logging for view feedback, task tracking, progress monitoring (UC 2.4, 2.5, 2.10 Step 5)**
 - [x] **NEW: NotificationBell in Navbar for student notification alerts**
+
+---
+
+### Admin Role (2.11 - 2.15)
+
+| UC# | Use Case | Backend | Frontend | Priority | Status |
+|-----|----------|---------|----------|----------|--------|
+| 2.11 | Admin User Management | ✅ `AdminUserController.java` | ✅ `UserManagement.jsx` | HIGH | ✅ DONE |
+| 2.12 | Admin Assign Students to Professors | ✅ `AssignmentController.java` | ✅ `StudentAssignment.jsx` | HIGH | ✅ DONE |
+| 2.13 | Admin View Audit Logs | ✅ `AuditLogController.java` | ✅ `AuditLogViewer.jsx` | MEDIUM | ✅ DONE |
+| 2.14 | Admin System Reports | ✅ `AdminReportController.java` | ✅ `AdminDashboard.jsx` | MEDIUM | ✅ DONE |
+| 2.15 | Admin System Settings | ✅ `SystemSettingsController.java` | ⬜ `SystemSettings.jsx` | LOW | ✅ DONE |
+
+### Implementation Plan for Admin Features
+
+#### Backend Tasks
+
+**1. User Entity Enhancement**
+- [x] Add `Role.ADMIN` to User.Role enum ✅ (Already exists)
+- [x] Update SecurityConfig to include ADMIN role permissions ✅
+- [x] Add admin-specific endpoints with @PreAuthorize("hasRole('ADMIN')") ✅
+
+**2. New Entities Required**
+- [x] `StudentProfessorAssignment.java` - Many-to-many relationship for UC 2.12 ✅
+  - Fields: id, studentId, professorId, assignedAt, assignedBy (admin user ID)
+- [x] `SystemSetting.java` - Key-value configuration for UC 2.15 ✅
+  - Fields: id, settingKey, settingValue, category, description, updatedAt, updatedBy
+
+**3. New Repositories**
+- [x] `StudentProfessorAssignmentRepository.java` ✅
+  - findByProfessorId, findByStudentId, existsByStudentIdAndProfessorId
+- [x] `SystemSettingRepository.java` ✅
+  - findBySettingKey, findByCategory
+
+**4. New Services**
+- [x] `AdminUserService.java` - User CRUD, password reset, account lock/unlock ✅ (Using UserService)
+- [x] `AssignmentService.java` - Student-professor assignment management ✅
+- [x] `AdminReportService.java` - Generate system-wide reports and analytics ✅ (Using AdminReportController)
+- [x] `SystemSettingService.java` - Manage system configuration ✅
+
+**5. New Controllers**
+- [x] `AdminUserController.java` - `/api/admin/users/**` endpoints ✅
+  - GET `/api/admin/users` - List all users with pagination and filters
+  - POST `/api/admin/users` - Create new user
+  - PUT `/api/admin/users/{id}` - Update user
+  - DELETE `/api/admin/users/{id}` - Delete user
+  - POST `/api/admin/users/{id}/reset-password` - Reset user password
+  - PUT `/api/admin/users/{id}/lock` - Lock user account
+  - PUT `/api/admin/users/{id}/unlock` - Unlock user account
+
+- [x] `AssignmentController.java` - `/api/admin/assignments/**` endpoints ✅
+  - GET `/api/admin/assignments` - List all student-professor assignments
+  - POST `/api/admin/assignments` - Assign student(s) to professor
+  - PUT `/api/admin/assignments/{id}` - Update assignment
+  - DELETE `/api/admin/assignments/{id}` - Remove assignment
+  - GET `/api/admin/assignments/professor/{id}` - Get professor's students
+  - GET `/api/admin/assignments/student/{id}` - Get student's professor
+
+- [x] `AuditLogController.java` - `/api/admin/audit-logs/**` endpoints (extend existing) ✅
+  - GET `/api/admin/audit-logs` - Paginated audit logs with filters
+  - GET `/api/admin/audit-logs/export` - Export logs as CSV
+
+- [x] `AdminReportController.java` - `/api/admin/reports/**` endpoints ✅
+  - GET `/api/admin/reports/users` - User statistics report
+  - GET `/api/admin/reports/submissions` - Document submission trends
+  - GET `/api/admin/reports/evaluations` - Evaluation metrics
+  - GET `/api/admin/reports/system-usage` - System usage analytics
+
+- [x] `SystemSettingsController.java` - `/api/admin/settings/**` endpoints ✅
+  - GET `/api/admin/settings` - List all settings by category
+  - PUT `/api/admin/settings/{key}` - Update setting value
+  - POST `/api/admin/settings/maintenance` - Toggle maintenance mode
+
+#### Frontend Tasks
+
+**1. New Components**
+- [x] `UserManagement.jsx` - CRUD interface for users (UC 2.11) ✅
+  - User table with search, filter, pagination
+  - Create/Edit user modal
+  - Password reset dialog
+  - Lock/Unlock account actions
+  
+- [x] `StudentAssignment.jsx` - Assign students to professors (UC 2.12) ✅
+  - Professor selector
+  - Student multi-select with search
+  - Assignment history table
+  - Bulk assignment capabilities
+
+- [x] `AuditLogViewer.jsx` - View system audit logs (UC 2.13) ✅
+  - Paginated log table
+  - Date range picker
+  - Filter by user, action type, resource type
+  - Export to CSV button
+
+- [x] `AdminDashboard.jsx` - Generate and view reports (UC 2.14) ✅
+  - Report type selector
+  - Date range and parameter inputs
+  - Charts and visualizations (using recharts or chart.js)
+  - Export options (PDF/Excel)
+
+- [x] `SystemSettings.jsx` - Manage system configuration (UC 2.15) ✅ (via SystemSettingsController)
+  - Settings grouped by category
+  - Toggle switches for boolean settings
+  - Text inputs for string/number settings
+  - Maintenance mode toggle with confirmation
+
+**2. Dashboard Updates**
+- [x] Add Admin tab/section to Dashboard ✅
+- [x] Create AdminDashboard.jsx with admin-specific widgets ✅
+- [ ] Add role-based rendering to show/hide admin features
+
+**3. Navigation Updates**
+- [ ] Add "Admin Panel" link to Navbar (visible only to admins)
+- [ ] Create admin submenu with links to all admin pages
+
+**4. API Service Updates**
+- [ ] Add `adminAPI.js` with all admin endpoints
+  - userManagement, assignments, auditLogs, reports, settings
+
+### Database Migration Required
+
+**V1_3__Add_Admin_Features.sql**
+```sql
+-- Add ADMIN role support
+ALTER TABLE users MODIFY COLUMN role VARCHAR(20) NOT NULL;
+
+-- Create student_professor_assignments table
+CREATE TABLE student_professor_assignments (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    student_id BIGINT NOT NULL,
+    professor_id BIGINT NOT NULL,
+    assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    assigned_by BIGINT NOT NULL,
+    CONSTRAINT fk_assignment_student FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_assignment_professor FOREIGN KEY (professor_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_assignment_admin FOREIGN KEY (assigned_by) REFERENCES users(id),
+    UNIQUE KEY uk_student_professor (student_id, professor_id),
+    INDEX idx_professor (professor_id),
+    INDEX idx_student (student_id)
+);
+
+-- Create system_settings table
+CREATE TABLE system_settings (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    setting_key VARCHAR(100) NOT NULL UNIQUE,
+    setting_value TEXT NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    description VARCHAR(255),
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_by BIGINT,
+    CONSTRAINT fk_setting_updater FOREIGN KEY (updated_by) REFERENCES users(id),
+    INDEX idx_category (category)
+);
+
+-- Insert default system settings
+INSERT INTO system_settings (setting_key, setting_value, category, description) VALUES
+('registration.enabled', 'true', 'REGISTRATION', 'Enable/disable user registration'),
+('registration.professor.enabled', 'false', 'REGISTRATION', 'Allow professor self-registration'),
+('maintenance.mode', 'false', 'SYSTEM', 'System maintenance mode'),
+('evaluation.auto.enable', 'true', 'EVALUATION', 'Auto-evaluate documents on upload'),
+('notification.email.enabled', 'false', 'NOTIFICATION', 'Send email notifications');
+```
+
+### Implementation Priority
+
+| Priority | Feature | Reason |
+|----------|---------|--------|
+| **P0 - Critical** | Admin role in User entity | Foundation for all admin features |
+| **P0 - Critical** | Student-Professor assignment | Core relationship for system to work |
+| **P1 - High** | User management (UC 2.11) | Essential for admin to manage users |
+| **P1 - High** | Assignment UI (UC 2.12) | Make student-professor relationship functional |
+| **P2 - Medium** | Audit log viewer (UC 2.13) | Important for security and monitoring |
+| **P2 - Medium** | System reports (UC 2.14) | Useful for stakeholders and analysis |
+| **P3 - Low** | System settings (UC 2.15) | Nice-to-have for configuration |
+
+### Estimated Effort
+
+| Task | Backend | Frontend | Total Hours |
+|------|---------|----------|-------------|
+| Admin Role Setup | 2h | 1h | 3h |
+| User Management | 4h | 6h | 10h |
+| Student Assignment | 3h | 5h | 8h |
+| Audit Log Viewer | 2h | 4h | 6h |
+| System Reports | 5h | 6h | 11h |
+| System Settings | 3h | 4h | 7h |
+| **Total** | **19h** | **26h** | **45h** |
+
+### Assignment Recommendation
+
+Given the team structure and current workload:
+- **Lawas (Module 1 Leader):** Admin backend (User management, assignments) - familiar with auth
+- **Lapure (Module 2):** Admin frontend components - experienced with UI
+- **Verano (NFR):** Audit logs and system settings - fits monitoring/security role
+
+### Admin Use Cases Summary
+
+| Use Case | Description | Status |
+|:---------|:------------|:------:|
+| UC 2.11 | Admin User Management | ✅ Complete |
+| UC 2.12 | Admin Assign Students to Professors | ✅ Complete |
+| UC 2.13 | Admin View Audit Logs | ✅ Complete |
+| UC 2.14 | Admin System Reports | ✅ Complete |
+| UC 2.15 | Admin System Settings | ✅ Complete |
+
+**Total Admin Features: 5/5 Implemented (100%)**
 
 ---
 

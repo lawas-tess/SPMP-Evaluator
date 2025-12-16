@@ -14,3 +14,9 @@ export { default as GradingCriteria } from './GradingCriteria';
 export { default as StudentList } from './StudentList';
 export { default as ParserConfiguration } from './ParserConfiguration';
 export { default as ParserFeedback } from './ParserFeedback';
+
+// Admin Dashboard Components
+export { default as UserManagement } from './UserManagement';
+export { default as StudentAssignment } from './StudentAssignment';
+export { default as AuditLogViewer } from './AuditLogViewer';
+export { default as AdminDashboard } from './AdminDashboard';

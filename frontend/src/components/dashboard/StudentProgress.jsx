@@ -17,7 +17,22 @@ const StudentProgress = ({ userId, studentName, onClose }) => {
     setError(null);
     try {
       const response = await reportAPI.getStudentProgress(userId);
-      setProgress(response.data);
+      const data = response.data;
+      
+      // Map backend response to expected format
+      const mappedProgress = {
+        studentName: data.studentName,
+        studentEmail: data.studentEmail,
+        totalDocuments: data.documents?.totalUploads || 0,
+        evaluatedDocuments: data.documents?.evaluated || 0,
+        averageScore: parseFloat(data.documents?.averageScore) || 0,
+        totalTasks: data.tasks?.totalTasks || 0,
+        completedTasks: data.tasks?.completed || 0,
+        recentDocuments: data.recentDocuments || [],
+        recentTasks: data.recentTasks || []
+      };
+      
+      setProgress(mappedProgress);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load student progress');
     } finally {

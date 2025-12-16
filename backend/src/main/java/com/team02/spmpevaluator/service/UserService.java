@@ -4,8 +4,10 @@ import com.team02.spmpevaluator.dto.UserDTO;
 import com.team02.spmpevaluator.entity.PasswordResetToken;
 import com.team02.spmpevaluator.entity.Role;
 import com.team02.spmpevaluator.entity.User;
-import com.team02.spmpevaluator.repository.UserRepository;
+import com.team02.spmpevaluator.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +17,7 @@ import java.util.UUID;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -78,13 +81,32 @@ public class UserService {
     }
 
     /**
-     * Updates user information.
+     * Gets a user by ID (throws exception if not found).
+     */
+    public User getUserById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + id));
+    }
+
+    /**
+     * Updates user information (by ID).
      */
     public User updateUser(Long id, String firstName, String lastName) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         user.setFirstName(firstName);
         user.setLastName(lastName);
+        return userRepository.save(user);
+    }
+
+    /**
+     * Updates an existing user entity.
+     */
+    public User updateUser(User user) {
+        if (!userRepository.existsById(user.getId())) {
+            throw new IllegalArgumentException("User not found with id: " + user.getId());
+        }
+        user.setUpdatedAt(LocalDateTime.now());
         return userRepository.save(user);
     }
 
@@ -169,9 +191,9 @@ public class UserService {
             message.setSubject("SPMP Evaluator - Password Reset Request");
             
             String resetLink = "http://localhost:3000/login?token=" + token;
-            
+
             message.setText("Click the link below to reset your password:\n" + resetLink);
-            
+
             mailSender.send(message);
         } catch (Exception e) {
             throw new RuntimeException("Failed to send email: " + e.getMessage());
