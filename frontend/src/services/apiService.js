@@ -182,4 +182,18 @@ export const notificationAPI = {
   markAllAsRead: () => api.put('/notifications/read-all'),
 };
 
+export const forgotPassword = async (email) => {
+  const response = await api.post('/auth/forgot-password', null, {
+    params: { email }
+  });
+  return response.data;
+};
+
+export const resetPassword = async (token, newPassword) => {
+  const response = await api.post('/auth/reset-password', null, {
+    params: { token, newPassword }
+  });
+  return response.data;
+};
+
 export default api;

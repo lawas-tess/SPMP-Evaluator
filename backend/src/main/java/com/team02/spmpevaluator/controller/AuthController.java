@@ -157,4 +157,24 @@ public class AuthController {
     public ResponseEntity<?> health() {
         return ResponseEntity.ok("Authentication service is running");
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestParam String email) {
+        try {
+            userService.processForgotPassword(email);
+            return ResponseEntity.ok("Password reset link sent to email.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage(), 400));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestParam String token, @RequestParam String newPassword) {
+        try {
+            userService.resetPassword(token, newPassword);
+            return ResponseEntity.ok("Password successfully reset.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage(), 400));
+        }
+    }
 }
