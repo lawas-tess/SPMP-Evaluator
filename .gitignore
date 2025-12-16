@@ -31,7 +31,6 @@ yarn-error.log*
 # env files
 .env
 backend/.env
-frontend/.env
 
 # Maven
 backend/target/
