@@ -6,6 +6,8 @@ import com.team02.spmpevaluator.entity.Role;
 import com.team02.spmpevaluator.entity.User;
 import com.team02.spmpevaluator.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,9 +30,8 @@ public class UserService {
     private final NotificationRepository notificationRepository;
     private final AuditLogRepository auditLogRepository;
     private final StudentProfessorAssignmentRepository assignmentRepository;
-
-    private final org.springframework.mail.javamail.JavaMailSender mailSender;
-    private final com.team02.spmpevaluator.repository.PasswordResetTokenRepository tokenRepository;
+    private final JavaMailSender mailSender;
+    private final PasswordResetTokenRepository tokenRepository;
 
     /**
      * Registers a new user with the provided details.
@@ -79,13 +81,32 @@ public class UserService {
     }
 
     /**
-     * Updates user information.
+     * Gets a user by ID (throws exception if not found).
+     */
+    public User getUserById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + id));
+    }
+
+    /**
+     * Updates user information (by ID).
      */
     public User updateUser(Long id, String firstName, String lastName) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         user.setFirstName(firstName);
         user.setLastName(lastName);
+        return userRepository.save(user);
+    }
+
+    /**
+     * Updates an existing user entity.
+     */
+    public User updateUser(User user) {
+        if (!userRepository.existsById(user.getId())) {
+            throw new IllegalArgumentException("User not found with id: " + user.getId());
+        }
+        user.setUpdatedAt(LocalDateTime.now());
         return userRepository.save(user);
     }
 
@@ -147,13 +168,74 @@ public class UserService {
         userRepository.save(user);
     }
 
-    // 1. Process the "Forgot Password" request (frontend links to reset page)
+    /**
+     * Locks a user account.
+     */
+    public void lockUser(Long userId) {
+        toggleUserStatus(userId, false);
+    }
+
+    /**
+     * Unlocks a user account.
+     */
+    public void unlockUser(Long userId) {
+        toggleUserStatus(userId, true);
+    }
+
+    /**
+     * Resets a user's password (admin function).
+     */
+    public void resetPassword(Long userId, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+    }
+
+    /**
+     * Deletes a user by ID along with all related records.
+     * This handles foreign key constraints by deleting related records first.
+     */
+    public void deleteUser(Long id) {
+        if (!userRepository.existsById(id)) {
+            throw new IllegalArgumentException("User not found with id: " + id);
+        }
+        
+        // Delete related records in order to satisfy foreign key constraints
+        // 1. Delete user's notifications
+        notificationRepository.deleteByUserId(id);
+        
+        // 2. Delete user's audit logs
+        auditLogRepository.deleteByUserId(id);
+        
+        // 3. Delete user's documents (cascade will handle related entities like compliance scores)
+        documentRepository.deleteByUploadedById(id);
+        
+        // 4. Delete tasks created by or assigned to the user
+        taskRepository.deleteByCreatedById(id);
+        taskRepository.deleteByAssignedToId(id);
+        
+        // 5. Delete student-professor assignments
+        assignmentRepository.deleteByStudentId(id);
+        assignmentRepository.deleteByProfessorId(id);
+        
+        // 6. Finally delete the user
+        userRepository.deleteById(id);
+    }
+
+    // ============= FORGOT PASSWORD FUNCTIONALITY =============
+
+    /**
+     * Process the "Forgot Password" request.
+     * Generates a reset token and sends email to user.
+     */
     public void processForgotPassword(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
 
         // Generate a random token
-        String token = java.util.UUID.randomUUID().toString();
+        String token = UUID.randomUUID().toString();
 
         // Save token to DB (valid for 30 minutes)
         PasswordResetToken myToken = new PasswordResetToken();
@@ -166,10 +248,12 @@ public class UserService {
         sendResetEmail(user.getEmail(), token);
     }
 
-    // 2. Helper to actually send the email
+    /**
+     * Helper to send password reset email.
+     */
     private void sendResetEmail(String toEmail, String token) {
         try {
-            org.springframework.mail.SimpleMailMessage message = new org.springframework.mail.SimpleMailMessage();
+            SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom("YOUR_EMAIL@gmail.com"); // Match the one in application.properties
             message.setTo(toEmail);
             message.setSubject("SPMP Evaluator - Password Reset Request");
@@ -185,8 +269,10 @@ public class UserService {
         }
     }
 
-    // 3. Process the "Reset Password" (Validation & Change)
-    public void resetPassword(String token, String newPassword) {
+    /**
+     * Reset password using token from forgot password flow.
+     */
+    public void resetPasswordWithToken(String token, String newPassword) {
         PasswordResetToken resetToken = tokenRepository.findByToken(token)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid token"));
 
@@ -198,156 +284,7 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
-        // Optional: Delete the token so it can't be used again
+        // Delete the token so it can't be used again
         tokenRepository.delete(resetToken);
-
-    /**
-     * Gets a user by ID (throws exception if not found).
-     */
-    public User getUserById(Long id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + id));
-    }
-
-    /**
-     * Updates an existing user.
-     */
-    public User updateUser(User user) {
-        if (!userRepository.existsById(user.getId())) {
-            throw new IllegalArgumentException("User not found with id: " + user.getId());
-        }
-        user.setUpdatedAt(LocalDateTime.now());
-        return userRepository.save(user);
-    }
-
-    /**
-     * Deletes a user by ID along with all related records.
-     * This handles foreign key constraints by deleting related records first.
-     */
-    public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new IllegalArgumentException("User not found with id: " + id);
-        }
-        
-        // Delete related records in order to satisfy foreign key constraints
-        // 1. Delete user's notifications
-        notificationRepository.deleteByUserId(id);
-        
-        // 2. Delete user's audit logs
-        auditLogRepository.deleteByUserId(id);
-        
-        // 3. Delete user's documents (cascade will handle related entities like compliance scores)
-        documentRepository.deleteByUploadedById(id);
-        
-        // 4. Delete tasks created by or assigned to the user
-        taskRepository.deleteByCreatedById(id);
-        taskRepository.deleteByAssignedToId(id);
-        
-        // 5. Delete student-professor assignments
-        assignmentRepository.deleteByStudentId(id);
-        assignmentRepository.deleteByProfessorId(id);
-        
-        // 6. Finally delete the user
-        userRepository.deleteById(id);
-    }
-
-    /**
-     * Resets a user's password (admin function).
-     */
-    public void resetPassword(Long userId, String newPassword) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.setUpdatedAt(LocalDateTime.now());
-        userRepository.save(user);
-    }
-
-    /**
-     * Locks a user account.
-     */
-    public void lockUser(Long userId) {
-        toggleUserStatus(userId, false);
-    }
-
-    /**
-     * Unlocks a user account.
-     */
-    public void unlockUser(Long userId) {
-        toggleUserStatus(userId, true);
-    }
-    /**
-     * Gets a user by ID (throws exception if not found).
-     */
-    public User getUserById(Long id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + id));
-    }
-
-    /**
-     * Updates an existing user.
-     */
-    public User updateUser(User user) {
-        if (!userRepository.existsById(user.getId())) {
-            throw new IllegalArgumentException("User not found with id: " + user.getId());
-        }
-        user.setUpdatedAt(LocalDateTime.now());
-        return userRepository.save(user);
-    }
-
-    /**
-     * Deletes a user by ID along with all related records.
-     * This handles foreign key constraints by deleting related records first.
-     */
-    public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new IllegalArgumentException("User not found with id: " + id);
-        }
-        
-        // Delete related records in order to satisfy foreign key constraints
-        // 1. Delete user's notifications
-        notificationRepository.deleteByUserId(id);
-        
-        // 2. Delete user's audit logs
-        auditLogRepository.deleteByUserId(id);
-        
-        // 3. Delete user's documents (cascade will handle related entities like compliance scores)
-        documentRepository.deleteByUploadedById(id);
-        
-        // 4. Delete tasks created by or assigned to the user
-        taskRepository.deleteByCreatedById(id);
-        taskRepository.deleteByAssignedToId(id);
-        
-        // 5. Delete student-professor assignments
-        assignmentRepository.deleteByStudentId(id);
-        assignmentRepository.deleteByProfessorId(id);
-        
-        // 6. Finally delete the user
-        userRepository.deleteById(id);
-    }
-
-    /**
-     * Resets a user's password (admin function).
-     */
-    public void resetPassword(Long userId, String newPassword) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.setUpdatedAt(LocalDateTime.now());
-        userRepository.save(user);
-    }
-
-    /**
-     * Locks a user account.
-     */
-    public void lockUser(Long userId) {
-        toggleUserStatus(userId, false);
-    }
-
-    /**
-     * Unlocks a user account.
-     */
-    public void unlockUser(Long userId) {
-        toggleUserStatus(userId, true);
->>>>>>> d9e4c41 (feat(admin): add admin controllers, frontend, and audit-log fixes; map student progress response; cascade delete for users)
     }
 }
