@@ -27,8 +27,13 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final org.springframework.mail.javamail.JavaMailSender mailSender;
-    private final com.team02.spmpevaluator.repository.PasswordResetTokenRepository tokenRepository;
+    private final SPMPDocumentRepository documentRepository;
+    private final TaskRepository taskRepository;
+    private final NotificationRepository notificationRepository;
+    private final AuditLogRepository auditLogRepository;
+    private final StudentProfessorAssignmentRepository assignmentRepository;
+    private final JavaMailSender mailSender;
+    private final PasswordResetTokenRepository tokenRepository;
 
     @Value("${spring.mail.username}")
     private String fromEmail;
@@ -58,6 +63,7 @@ public class UserService {
 
         return userRepository.save(user);
     }
+
 
     /**
      * Finds a user by username.
@@ -168,28 +174,97 @@ public class UserService {
         userRepository.save(user);
     }
 
+    /**
+     * Locks a user account.
+     */
+    public void lockUser(Long userId) {
+        toggleUserStatus(userId, false);
+    }
+
+    /**
+     * Unlocks a user account.
+     */
+    public void unlockUser(Long userId) {
+        toggleUserStatus(userId, true);
+    }
+
+    /**
+     * Resets a user's password (admin function).
+     */
+    public void resetPassword(Long userId, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+    }
+
+    /**
+     * Deletes a user by ID along with all related records.
+     * This handles foreign key constraints by deleting related records first.
+     */
+    public void deleteUser(Long id) {
+        if (!userRepository.existsById(id)) {
+            throw new IllegalArgumentException("User not found with id: " + id);
+        }
+        
+        // Delete related records in order to satisfy foreign key constraints
+        // 1. Delete user's notifications
+        notificationRepository.deleteByUserId(id);
+        
+        // 2. Delete user's audit logs
+        auditLogRepository.deleteByUserId(id);
+        
+        // 3. Delete user's documents (cascade will handle related entities like compliance scores)
+        documentRepository.deleteByUploadedById(id);
+        
+        // 4. Delete tasks created by or assigned to the user
+        taskRepository.deleteByCreatedById(id);
+        taskRepository.deleteByAssignedToId(id);
+        
+        // 5. Delete student-professor assignments
+        assignmentRepository.deleteByStudentId(id);
+        assignmentRepository.deleteByProfessorId(id);
+        
+        // 6. Finally delete the user
+        userRepository.deleteById(id);
+    }
+
+    // ============= FORGOT PASSWORD FUNCTIONALITY =============
+
+    /**
+     * Process the "Forgot Password" request.
+     * Generates a reset token and sends email to user.
+     */
     public void processForgotPassword(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
 
-        String token = java.util.UUID.randomUUID().toString();
+        // Generate a random token
+        String token = UUID.randomUUID().toString();
 
+        // Save token to DB (valid for 30 minutes)
         PasswordResetToken myToken = new PasswordResetToken();
         myToken.setToken(token);
         myToken.setUser(user);
         myToken.setExpiryDate(LocalDateTime.now().plusMinutes(30));
         tokenRepository.save(myToken);
 
+        // Send the email
         sendResetEmail(user.getEmail(), token);
     }
 
+    /**
+     * Helper to send password reset email.
+     */
     private void sendResetEmail(String toEmail, String token) {
         try {
-            org.springframework.mail.SimpleMailMessage message = new org.springframework.mail.SimpleMailMessage();
-            message.setFrom(fromEmail); 
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("YOUR_EMAIL@gmail.com"); // Match the one in application.properties
             message.setTo(toEmail);
             message.setSubject("SPMP Evaluator - Password Reset Request");
-            
+
+            // This link points to your React Frontend
             String resetLink = "http://localhost:3000/login?token=" + token;
 
             message.setText("Click the link below to reset your password:\n" + resetLink);
@@ -200,7 +275,10 @@ public class UserService {
         }
     }
 
-    public void resetPassword(String token, String newPassword) {
+    /**
+     * Reset password using token from forgot password flow.
+     */
+    public void resetPasswordWithToken(String token, String newPassword) {
         PasswordResetToken resetToken = tokenRepository.findByToken(token)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid token"));
 
@@ -212,6 +290,7 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
+        // Delete the token so it can't be used again
         tokenRepository.delete(resetToken);
     }
 
