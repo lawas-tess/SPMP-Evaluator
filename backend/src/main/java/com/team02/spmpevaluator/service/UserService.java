@@ -1,6 +1,7 @@
 package com.team02.spmpevaluator.service;
 
 import com.team02.spmpevaluator.dto.UserDTO;
+import com.team02.spmpevaluator.entity.PasswordResetToken;
 import com.team02.spmpevaluator.entity.Role;
 import com.team02.spmpevaluator.entity.User;
 import com.team02.spmpevaluator.repository.UserRepository;
@@ -21,6 +22,9 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
+    private final org.springframework.mail.javamail.JavaMailSender mailSender;
+    private final com.team02.spmpevaluator.repository.PasswordResetTokenRepository tokenRepository;
 
     /**
      * Registers a new user with the provided details.
@@ -136,5 +140,60 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         user.setEnabled(enabled);
         userRepository.save(user);
+    }
+
+    // 1. Process the "Forgot Password" request
+    public void processForgotPassword(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+
+        // Generate a random token
+        String token = java.util.UUID.randomUUID().toString();
+
+        // Save token to DB (valid for 30 minutes)
+        PasswordResetToken myToken = new PasswordResetToken();
+        myToken.setToken(token);
+        myToken.setUser(user);
+        myToken.setExpiryDate(LocalDateTime.now().plusMinutes(30));
+        tokenRepository.save(myToken);
+
+        // Send the email
+        sendResetEmail(user.getEmail(), token);
+    }
+
+    // 2. Helper to actually send the email
+    private void sendResetEmail(String toEmail, String token) {
+        try {
+            org.springframework.mail.SimpleMailMessage message = new org.springframework.mail.SimpleMailMessage();
+            message.setFrom("YOUR_EMAIL@gmail.com"); // Match the one in application.properties
+            message.setTo(toEmail);
+            message.setSubject("SPMP Evaluator - Password Reset Request");
+            
+            // This link points to your React Frontend
+            String resetLink = "http://localhost:3000/login?token=" + token;
+            
+            message.setText("Click the link below to reset your password:\n" + resetLink);
+            
+            mailSender.send(message);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send email: " + e.getMessage());
+        }
+    }
+
+    // 3. Process the "Reset Password" (Validation & Change)
+    public void resetPassword(String token, String newPassword) {
+        PasswordResetToken resetToken = tokenRepository.findByToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid token"));
+
+        if (resetToken.isExpired()) {
+            throw new IllegalArgumentException("Token has expired");
+        }
+
+        User user = resetToken.getUser();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // Optional: Delete the token so it can't be used again
+        tokenRepository.delete(resetToken);
     }
 }
