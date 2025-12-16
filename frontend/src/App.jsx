@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext.jsx';
 import AuthPage from './pages/AuthPage.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import OAuthCallback from './pages/OAuthCallback.jsx';
 import './App.css';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
           {/* Public routes */}
           <Route path="/login" element={<AuthPage />} />
           <Route path="/signup" element={<AuthPage />} />
+          <Route path="/auth/google/callback" element={<OAuthCallback />} />
 
           {/* Protected routes */}
           <Route
