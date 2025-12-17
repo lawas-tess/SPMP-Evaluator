@@ -34,3 +34,7 @@ build/
 
 ### Local Development Configuration ###
 src/main/resources/application-local.properties
+
+
+env File/
+*.env

@@ -28,6 +28,9 @@ yarn-error.log*
 
 # Environment
 # .env files are tracked for now
+# env files
+.env
+backend/.env
 
 # Maven
 backend/target/

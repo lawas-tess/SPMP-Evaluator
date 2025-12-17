@@ -325,3 +325,528 @@ Additional features completed:
 - [ ] **Trend charts** - Visualize score progression over time
 - [ ] **Comparison view** - Side-by-side comparison of different versions
 - [ ] **Advanced filtering** - Filter history by date range or source type
+
+---
+
+# System Design Document (SDD) - AI Scoring & Reporting
+
+## 4.1 Generate Score & Feedback (UC 4.1)
+
+### Front-end Component(s)
+
+**Component Name:** `EvaluationResults.jsx`
+
+**Description and purpose:**
+Displays generated compliance scores and AI feedback. Shows scoring breakdown by criteria and historical scores.
+
+**Component type or format:**
+React Component with score visualization and breakdown charts.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `ScoringController.java`
+
+**Description and purpose:**
+REST endpoints for triggering score generation and retrieving results.
+
+**Component type or format:**
+Spring Boot REST Controller with asynchronous score calculation endpoints.
+
+---
+
+**Component Name:** `ScoringService.java`
+
+**Description and purpose:**
+Business logic for calculating compliance scores based on parser data and configured weights.
+
+**Component type or format:**
+Spring Service class with weighted scoring algorithm.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml ScoreGeneration_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class EvaluationResults {
+  - scores: Map<String, Double>
+  - feedback: String
+  - breakdown: List
+  --
+  + displayScores(): void
+  + showBreakdown(): void
+}
+
+class ScoringController {
+  - scoringService: ScoringService
+  --
+  + generateScore(): ResponseEntity
+  + getScoreHistory(): ResponseEntity
+}
+
+class ScoringService {
+  - scoringWeights: Map<String, Double>
+  - parserFeedbackRepo: Repository
+  --
+  + calculateScore(): Double
+  + applyWeights(): Map
+  + generateFeedback(): String
+}
+
+class ScoreRecord {
+  - id: Long
+  - documentId: Long
+  - score: Double
+  - breakdown: JSON
+  - timestamp: LocalDateTime
+}
+
+EvaluationResults --> ScoringController
+ScoringController --> ScoringService
+ScoringService --> ScoreRecord
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml ScoreGeneration_Sequence
+!theme plain
+participant "System" as System
+participant "ScoringController" as Ctrl
+participant "ScoringService" as Service
+participant "ParserFeedback" as Parser
+participant "Database" as DB
+
+System -> Ctrl: Trigger score generation
+activate Ctrl
+Ctrl -> Service: calculateScore()
+activate Service
+Service -> Parser: Get parser data
+activate Parser
+Parser --> Service: Document analysis
+deactivate Parser
+Service -> Service: Apply weights
+Service -> Service: Calculate total score
+Service -> Service: Generate summary
+Service -> DB: Save score record
+activate DB
+deactivate DB
+Service --> Ctrl: Score + Feedback
+deactivate Service
+Ctrl --> System: Response
+deactivate Ctrl
+@enduml
+```
+
+---
+
+## 4.2 Apply Custom Rubric (UC 4.2)
+
+### Front-end Component(s)
+
+**Component Name:** `GradingCriteria.jsx`
+
+**Description and purpose:**
+Interface for defining and editing custom scoring rubrics with weight assignments.
+
+**Component type or format:**
+React Component with rubric configuration form and validation.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `RubricController.java`
+
+**Description and purpose:**
+REST endpoints for rubric CRUD operations with validation.
+
+**Component type or format:**
+Spring Boot REST Controller with rubric management endpoints.
+
+---
+
+**Component Name:** `RubricService.java`
+
+**Description and purpose:**
+Business logic for rubric management and validation that weights sum to 100%.
+
+**Component type or format:**
+Spring Service class with rubric validation and application logic.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml CustomRubric_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class GradingCriteria {
+  - criteria: Criterion[]
+  - totalWeight: Double
+  --
+  + addCriterion(): void
+  + updateWeight(): void
+  + validateTotal(): boolean
+}
+
+class RubricController {
+  - rubricService: RubricService
+  --
+  + createRubric(): ResponseEntity
+  + updateRubric(): ResponseEntity
+  + deleteRubric(): ResponseEntity
+}
+
+class RubricService {
+  - rubricRepository: RubricRepository
+  --
+  + saveRubric(): Rubric
+  + validateWeights(): boolean
+  + applyRubric(): Map
+}
+
+class Rubric {
+  - id: Long
+  - professor: User
+  - criteria: Criterion[]
+  - totalWeight: Double
+}
+
+class Criterion {
+  - id: Long
+  - name: String
+  - weight: Double
+  - description: String
+}
+
+GradingCriteria --> RubricController
+RubricController --> RubricService
+RubricService --> Rubric
+Rubric --> Criterion
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml CustomRubric_Sequence
+!theme plain
+participant "Professor" as Prof
+participant "GradingCriteria" as UI
+participant "RubricController" as Ctrl
+participant "RubricService" as Service
+participant "Database" as DB
+
+Prof -> UI: Create rubric
+activate UI
+UI -> UI: Add criteria
+UI -> UI: Validate weights (sum=100)
+UI -> Ctrl: POST /api/rubric
+activate Ctrl
+Ctrl -> Service: validateAndSave()
+activate Service
+Service -> Service: Check total weight
+Service -> DB: persist(Rubric)
+activate DB
+deactivate DB
+Service --> Ctrl: Created rubric
+deactivate Service
+Ctrl --> UI: Success
+deactivate Ctrl
+UI --> Prof: Confirm creation
+deactivate UI
+@enduml
+```
+
+---
+
+## 4.3 Override Score (UC 4.3)
+
+### Front-end Component(s)
+
+**Component Name:** `ScoreOverride.jsx`
+
+**Description and purpose:**
+Interface showing current score with ability to override and add justification.
+
+**Component type or format:**
+React Component with score input and audit trail display.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `OverrideController.java`
+
+**Description and purpose:**
+REST endpoints for score override operations with audit logging.
+
+**Component type or format:**
+Spring Boot REST Controller with override endpoints and audit integration.
+
+---
+
+**Component Name:** `OverrideService.java`
+
+**Description and purpose:**
+Business logic for handling score overrides with justification and audit trail.
+
+**Component type or format:**
+Spring Service class with override validation and logging.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml ScoreOverride_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class ScoreOverride {
+  - originalScore: Double
+  - newScore: Double
+  - justification: String
+  --
+  + handleOverride(): void
+  + validateRange(): boolean
+}
+
+class OverrideController {
+  - overrideService: OverrideService
+  --
+  + overrideScore(): ResponseEntity
+  + getOverrideHistory(): ResponseEntity
+}
+
+class OverrideService {
+  - scoreRepository: ScoreRepository
+  - auditLog: AuditLogService
+  --
+  + overrideScore(): ScoreRecord
+  + validateOverride(): boolean
+  + logOverride(): void
+}
+
+class ScoreRecord {
+  - originalScore: Double
+  - overriddenScore: Double
+  - justification: String
+  - overriddenBy: User
+  - timestamp: LocalDateTime
+}
+
+ScoreOverride --> OverrideController
+OverrideController --> OverrideService
+OverrideService --> ScoreRecord
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml ScoreOverride_Sequence
+!theme plain
+participant "Professor" as Prof
+participant "ScoreOverride" as UI
+participant "OverrideController" as Ctrl
+participant "OverrideService" as Service
+participant "AuditLog" as Audit
+participant "Database" as DB
+
+Prof -> UI: Enter override
+activate UI
+UI -> UI: Validate range (0-100)
+UI -> Ctrl: POST /api/scores/{id}/override
+activate Ctrl
+Ctrl -> Service: overrideScore()
+activate Service
+Service -> Service: Validate override
+Service -> Audit: logOverride()
+activate Audit
+deactivate Audit
+Service -> DB: Update score
+activate DB
+deactivate DB
+Service --> Ctrl: Success
+deactivate Service
+Ctrl --> UI: Confirm
+deactivate Ctrl
+UI --> Prof: Show success
+deactivate UI
+@enduml
+```
+
+---
+
+## 4.5 View Scores & Feedback (UC 4.5)
+
+### Front-end Component(s)
+
+**Component Name:** `SubmissionTracker.jsx` + `EvaluationResults.jsx`
+
+**Description and purpose:**
+Dashboard displaying all submissions with scores, feedback, and historical comparisons.
+
+**Component type or format:**
+React Components with score visualization, history timeline, and comparison view.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `ReportController.java`
+
+**Description and purpose:**
+REST endpoints for retrieving score reports and historical data.
+
+**Component type or format:**
+Spring Boot REST Controller with report endpoints.
+
+---
+
+**Component Name:** `ReportExportService.java`
+
+**Description and purpose:**
+Business logic for generating and exporting reports in PDF/Excel format.
+
+**Component type or format:**
+Spring Service class with export functionality using iText and Apache POI.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml ViewScores_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class SubmissionTracker {
+  - submissions: Submission[]
+  - selectedScore: ScoreRecord
+  - history: List
+  --
+  + filterByScore(): void
+  + viewHistory(): void
+  + exportReport(): void
+}
+
+class ReportController {
+  - reportService: ReportService
+  --
+  + getScoreReport(): ResponseEntity
+  + exportPDF(): ResponseEntity
+  + exportExcel(): ResponseEntity
+}
+
+class ReportExportService {
+  - reportTemplate: Template
+  --
+  + generatePDF(): File
+  + generateExcel(): File
+  + formatReport(): ReportData
+}
+
+SubmissionTracker --> ReportController
+ReportController --> ReportExportService
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml ViewScores_Sequence
+!theme plain
+participant "User" as User
+participant "SubmissionTracker" as UI
+participant "ReportController" as Ctrl
+participant "ReportService" as Service
+participant "Database" as DB
+
+User -> UI: Open Dashboard
+activate UI
+UI -> Ctrl: GET /api/reports/submissions
+activate Ctrl
+Ctrl -> Service: getSubmissions()
+activate Service
+Service -> DB: Query submissions + scores
+activate DB
+DB --> Service: Data
+deactivate DB
+Service --> Ctrl: Submissions
+deactivate Service
+Ctrl --> UI: Response
+deactivate Ctrl
+UI --> User: Display submissions
+deactivate UI
+
+User -> UI: Export Report
+activate UI
+UI -> Ctrl: GET /api/reports/export/{format}
+activate Ctrl
+Ctrl -> Service: export()
+activate Service
+Service -> Service: Format data
+Service --> Ctrl: File
+deactivate Service
+Ctrl --> UI: Download
+deactivate Ctrl
+UI --> User: File saved
+deactivate UI
+@enduml
+```
+
+---
+
+**Data Design:**
+
+```sql
+CREATE TABLE score_records (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    document_id BIGINT NOT NULL,
+    calculated_score DOUBLE,
+    overridden_score DOUBLE,
+    override_justification LONGTEXT,
+    overridden_by BIGINT,
+    score_breakdown JSON,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (document_id) REFERENCES spmp_documents(id) ON DELETE CASCADE,
+    FOREIGN KEY (overridden_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_document_id (document_id)
+);
+
+CREATE TABLE rubrics (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    professor_id BIGINT NOT NULL,
+    name VARCHAR(255),
+    criteria_config JSON,
+    total_weight DOUBLE DEFAULT 100.0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (professor_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_professor_id (professor_id)
+);
+```
+
+---
