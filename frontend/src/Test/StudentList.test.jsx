@@ -90,9 +90,22 @@ test("displays student cards and class summary", async () => {
       email: s.email,
     })),
   });
+  // Map progress to backend response format
   reportAPI.getStudentProgress.mockImplementation((id) => {
     const s = students.find((x) => x.id === id);
-    return Promise.resolve({ data: s.progress });
+    return Promise.resolve({
+      data: {
+        documents: {
+          totalUploads: s.progress.totalDocuments,
+          evaluated: s.progress.evaluatedDocuments,
+          averageScore: s.progress.averageScore,
+        },
+        tasks: {
+          totalTasks: s.progress.totalTasks,
+          completed: s.progress.completedTasks,
+        },
+      },
+    });
   });
 
   render(<StudentList onSelectStudent={vi.fn()} />);
@@ -133,9 +146,22 @@ test("filters students by search and sorts by score", async () => {
       email: s.email,
     })),
   });
+  // Map progress to backend response format
   reportAPI.getStudentProgress.mockImplementation((id) => {
     const s = students.find((x) => x.id === id);
-    return Promise.resolve({ data: s.progress });
+    return Promise.resolve({
+      data: {
+        documents: {
+          totalUploads: s.progress.totalDocuments || 0,
+          evaluated: s.progress.evaluatedDocuments || 0,
+          averageScore: s.progress.averageScore || 0,
+        },
+        tasks: {
+          totalTasks: s.progress.totalTasks || 0,
+          completed: s.progress.completedTasks || 0,
+        },
+      },
+    });
   });
 
   render(<StudentList onSelectStudent={vi.fn()} />);
