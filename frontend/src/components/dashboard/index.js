@@ -20,3 +20,6 @@ export { default as UserManagement } from './UserManagement';
 export { default as StudentAssignment } from './StudentAssignment';
 export { default as AuditLogViewer } from './AuditLogViewer';
 export { default as AdminDashboard } from './AdminDashboard';
+export { default as StudentAssignmentForm } from './StudentAssignmentForm';
+export { default as AdminReports } from './AdminReports';
+export { default as SystemSettingsForm } from './SystemSettingsForm';

@@ -492,3 +492,439 @@ This module documents all use cases for the SPMP Evaluator system related to **S
 - **Invalid configuration:** System prevents saving invalid settings
 - **Requires restart:** System warns when changes require application restart
 
+---
+
+# 2.3 Admin: System Administration & User Management
+
+## Overview
+This section documents all administrative use cases (UC 2.11 - UC 2.15) for system administrators managing users, assignments, and audit activities.
+
+---
+
+## Activity Diagrams
+
+### Activity Diagram 1: Admin Create User
+
+```
+[Start]
+↓
+Admin opens Dashboard
+↓
+Admin clicks "Create User"
+↓
+Admin fills User Form (Name, Email, Role)
+↓
+System validates user data
+↓
+Decision:
+  - If invalid → Show validation error message
+  - If valid → System creates user account → System logs action → User Created
+↓
+[End]
+```
+
+### Activity Diagram 2: Admin Edit User
+
+```
+[Start]
+↓
+Admin opens User Management
+↓
+Admin selects user from list
+↓
+Admin modifies user details (Name, Email, Role, Status)
+↓
+System validates changes
+↓
+Decision:
+  - If invalid → Show validation error
+  - If valid → System updates user record → System logs action → User Updated
+↓
+[End]
+```
+
+### Activity Diagram 3: Admin Delete User
+
+```
+[Start]
+↓
+Admin opens User Management
+↓
+Admin selects user to delete
+↓
+System prompts confirmation dialog
+↓
+Decision:
+  - If cancel → Return to user list
+  - If confirm → System cascade-deletes user data → System logs deletion → User Deleted
+↓
+[End]
+```
+
+### Activity Diagram 4: Admin View Audit Log
+
+```
+[Start]
+↓
+Admin navigates to Audit Log section
+↓
+System displays paginated log entries
+↓
+Admin applies filters (Date, User, Action Type)
+↓
+System updates display with filtered results
+↓
+Decision:
+  - Export logs → System generates CSV/PDF → Download complete
+  - View details → System displays detailed log entry → Admin reviews
+↓
+[End]
+```
+
+### Activity Diagram 5: Admin System Settings
+
+```
+[Start]
+↓
+Admin navigates to System Settings
+↓
+Admin selects settings category
+↓
+Admin modifies configuration values
+↓
+System validates new settings
+↓
+Decision:
+  - If invalid → Show validation error
+  - If valid → Admin confirms changes → System applies settings → System logs change → Settings Updated
+↓
+Decision (Requires Restart?):
+  - Yes → System shows restart warning
+  - No → Settings applied immediately
+↓
+[End]
+```
+
+---
+
+## UC 2.11: Admin View & Manage Users
+
+| Field | Description |
+|:------|:------------|
+| **Use Case Name** | Admin View & Manage Users |
+| **Primary Actor** | Administrator |
+| **Secondary Actors** | Database, User Management Module |
+| **Description** | Allows administrators to **view a list of all users** in the system, including students, professors, and other admins, with filtering and search capabilities. |
+| **Preconditions** | Administrator is logged in and has admin privileges. |
+| **Postconditions** | Admin can view, search, and filter the complete user list. |
+
+### Basic Flow ✅ ALL IMPLEMENTED
+
+| Step | Action | Status |
+|:----:|:-------|:------:|
+| 1 | Admin navigates to User Management section | ✅ |
+| 2 | System displays all users with role, email, and status | ✅ |
+| 3 | Admin can filter by role (Student/Professor/Admin) | ✅ |
+| 4 | Admin can search by name or email | ✅ |
+| 5 | Admin can sort by date created, last login, or status | ✅ |
+| 6 | System displays user details on selection | ✅ |
+
+### Alternative Flows
+- **No users found:** System displays "No users matching criteria" message
+- **Export list:** Admin can export user list as CSV
+
+### Exceptions
+- **Database error:** System displays error message and retry option
+
+---
+
+## UC 2.12: Admin Create User
+
+| Field | Description |
+|:------|:------------|
+| **Use Case Name** | Admin Create User |
+| **Primary Actor** | Administrator |
+| **Secondary Actors** | Database, Email Service |
+| **Description** | Enables administrators to **create new user accounts** directly in the system with assigned role (Student, Professor, Admin). |
+| **Preconditions** | Administrator is logged in with admin privileges. |
+| **Postconditions** | New user account is created and stored in the database. |
+
+### Basic Flow ✅ ALL IMPLEMENTED
+
+| Step | Action | Status |
+|:----:|:-------|:------:|
+| 1 | Admin opens Create User form | ✅ |
+| 2 | Admin enters name, email, role | ✅ |
+| 3 | System validates email format and uniqueness | ✅ |
+| 4 | Admin sets temporary password or auto-generates one | ✅ |
+| 5 | Admin confirms user creation | ✅ |
+| 6 | System creates user account and logs action | ✅ |
+
+### Alternative Flows
+- **Email already exists:** System displays error and suggests recovery or alternative email
+- **Auto-send credentials:** Admin can send temporary password via email
+
+### Exceptions
+- **Invalid input:** System shows validation error and prompts correction
+- **Database error:** System prevents creation and displays error message
+
+---
+
+## UC 2.13: Admin Edit User
+
+| Field | Description |
+|:------|:------------|
+| **Use Case Name** | Admin Edit User |
+| **Primary Actor** | Administrator |
+| **Secondary Actors** | Database |
+| **Description** | Allows administrators to **modify user details** such as name, email, role, and status. |
+| **Preconditions** | Administrator is logged in and user to be edited exists. |
+| **Postconditions** | User details are updated in the database and changes are logged. |
+
+### Basic Flow ✅ ALL IMPLEMENTED
+
+| Step | Action | Status |
+|:----:|:-------|:------:|
+| 1 | Admin selects a user from the user list | ✅ |
+| 2 | Admin opens user edit form | ✅ |
+| 3 | Admin modifies user details (name, email, role, status) | ✅ |
+| 4 | System validates changes | ✅ |
+| 5 | Admin confirms changes | ✅ |
+| 6 | System updates user record and logs action | ✅ |
+
+### Alternative Flows
+- **Change role:** Admin can change user role (e.g., Student → Professor)
+- **Disable account:** Admin can disable/enable user account without deletion
+
+### Exceptions
+- **Email conflict:** System prevents duplicate email and prompts alternative
+- **Invalid data:** System shows validation error and retains original values
+
+---
+
+## UC 2.14: Admin Delete User
+
+| Field | Description |
+|:------|:------------|
+| **Use Case Name** | Admin Delete User |
+| **Primary Actor** | Administrator |
+| **Secondary Actors** | Database |
+| **Description** | Enables administrators to **remove user accounts** from the system and cascade-delete associated assignments and tasks. |
+| **Preconditions** | Administrator is logged in and user to be deleted exists. |
+| **Postconditions** | User account and all associated data (assignments, tasks) are removed from the system. |
+
+### Basic Flow ✅ ALL IMPLEMENTED
+
+| Step | Action | Status |
+|:----:|:-------|:------:|
+| 1 | Admin selects user to delete | ✅ |
+| 2 | System prompts for confirmation | ✅ |
+| 3 | Admin confirms deletion | ✅ |
+| 4 | System cascade-deletes user, assignments, and tasks | ✅ |
+| 5 | System logs deletion action | ✅ |
+| 6 | System displays success message | ✅ |
+
+### Alternative Flows
+- **Soft delete:** System can archive user instead of permanent deletion
+- **Audit trail:** Deleted user data is preserved in audit log
+
+### Exceptions
+- **User not found:** System displays error and updates list
+- **Deletion failure:** System retains user and displays error message
+
+---
+
+## UC 2.15: Admin View Audit Log
+
+| Field | Description |
+|:------|:------------|
+| **Use Case Name** | Admin View Audit Log |
+| **Primary Actor** | Administrator |
+| **Secondary Actors** | Database, Audit Log Module |
+| **Description** | Allows administrators to **access comprehensive audit logs** of all system activities, including user actions, file uploads, deletions, and system changes. |
+| **Preconditions** | Administrator is logged in with admin privileges. |
+| **Postconditions** | Admin can view, filter, and export audit logs for compliance and security analysis. |
+
+### Basic Flow ✅ ALL IMPLEMENTED
+
+| Step | Action | Status |
+|:----:|:----:|:------:|
+| 1 | Admin navigates to Audit Log section | ✅ |
+| 2 | System displays all logged activities with timestamp, user, action | ✅ |
+| 3 | Admin can filter by date range | ✅ |
+| 4 | Admin can filter by user or action type | ✅ |
+| 5 | Admin can view detailed log entry | ✅ |
+| 6 | Admin can export logs as CSV or PDF | ✅ |
+
+### Alternative Flows
+- **Advanced search:** Admin can search by keyword or action code
+- **Real-time monitoring:** Admin can view live system activity stream
+- **Alert setup:** Admin can configure alerts for specific activities
+
+### Exceptions
+- **No logs found:** System displays "No logs matching criteria" message
+- **Export error:** System shows error and suggests retry
+
+---
+
+## Admin Role Summary
+
+| Feature | Status | API Endpoint | Frontend Component |
+|---------|--------|--------------|-------------------|
+| View Users | ✅ DONE | `GET /api/admin/users` | `UserManagement.jsx` |
+| Create User | ✅ DONE | `POST /api/admin/users` | `UserManagement.jsx` |
+| Edit User | ✅ DONE | `PUT /api/admin/users/{id}` | `UserManagement.jsx` |
+| Delete User | ✅ DONE | `DELETE /api/admin/users/{id}` | `UserManagement.jsx` |
+| Assign Students | ✅ DONE | `POST /api/admin/assignments` | `StudentAssignmentForm.jsx` |
+| View Audit Log | ✅ DONE | `GET /api/admin/audit-logs` | `AuditLogViewer.jsx` |
+| System Reports | ✅ DONE | `GET /api/admin/reports/*` | `AdminReports.jsx` |
+| System Settings | ✅ DONE | `GET/POST /api/admin/settings` | `SystemSettingsForm.jsx` |
+
+**All 5 Admin Features (UC 2.11-2.15) Fully Implemented: Backend + Frontend + Database**
+
+---
+
+# 2.3 System Administrator (SRS Format)
+
+## Use Case Diagram
+
+**Actors:**
+- System Administrator
+
+**Use Cases:**
+- Manage Users (Create/Edit/Delete)
+- View User List
+- View Audit Log
+
+**Relationships:**
+- Administrator → View User List
+- Administrator → Manage Users (Create/Edit/Delete)
+- Administrator → View Audit Log
+- Manage Users → includes View User List
+
+**System Boundary:**
+- Admin Dashboard Module
+
+---
+
+## Use Case Description
+
+| Section | Details |
+|---------|---------|
+| **Use Case ID** | UC 2.3 |
+| **Use Case Name** | System Administrator Dashboard & User Management |
+| **Primary Actors** | System Administrator |
+| **Secondary Actor(s)** | Database, User Management Module, Audit Log Module, Email Service |
+| **Description** | The administrator can:<br/>• View all users in the system with filtering and search<br/>• Create, edit, and delete user accounts<br/>• Assign roles to users (Student, Professor, Admin)<br/>• View comprehensive audit logs of all system activities<br/>• Monitor user compliance and system security |
+| **Preconditions** | Administrator is logged in with admin privileges. User list is loaded. |
+| **Postconditions** | User management actions are saved and logged. Audit trail is maintained. |
+
+---
+
+## Basic Flow
+
+### A. User Management (View/Create/Edit/Delete)
+
+1. Administrator opens the Admin Dashboard
+2. System displays all users with:
+   - User name & email
+   - Role (Student/Professor/Admin)
+   - Status (Active/Inactive)
+   - Date Created
+   - Last Login
+
+3. Administrator can:
+   - **Filter by role:** Select Student, Professor, or Admin
+   - **Search by name/email:** Enter keyword to find users
+   - **Sort by:** Date Created, Last Login, or Status
+   - **Create User:** Click "Add User" button
+   - **Edit User:** Click user row to edit details
+   - **Delete User:** Select user and click "Delete" (with confirmation)
+
+4. **Create User Flow:**
+   - Administrator clicks "Create User"
+   - System opens User Form with fields:
+     - Full Name (required)
+     - Email (required, must be unique)
+     - Role (Student/Professor/Admin)
+     - Temporary Password (auto-generated or custom)
+   - Administrator fills form and clicks "Create"
+   - System validates email uniqueness
+   - System creates user account and logs action
+   - System displays success message
+
+5. **Edit User Flow:**
+   - Administrator selects user from list
+   - System opens Edit Form with current details
+   - Administrator modifies name, email, role, or status
+   - System validates changes (e.g., email uniqueness)
+   - Administrator clicks "Save"
+   - System updates user record and logs action
+   - System displays success message
+
+6. **Delete User Flow:**
+   - Administrator selects user from list
+   - System prompts confirmation: "This will delete user and all associated data"
+   - Administrator confirms
+   - System cascade-deletes user, tasks, and assignments
+   - System logs deletion action
+   - System displays success message and refreshes user list
+
+### B. Audit Log Viewing
+
+1. Administrator opens Audit Log section
+2. System displays all logged activities with:
+   - Timestamp
+   - User who performed action
+   - Action type (Create/Edit/Delete/Login/etc.)
+   - Resource affected
+   - Details
+
+3. Administrator can:
+   - **Filter by date range:** Select start and end date
+   - **Filter by user:** Select specific user to view their actions
+   - **Filter by action type:** Select Create, Edit, Delete, Login, etc.
+   - **Search:** Enter keyword or action code
+   - **View details:** Click log entry to see full details
+   - **Export logs:** Download as CSV or PDF
+
+4. System displays activities such as:
+   - User Login attempts (success/failure)
+   - User Account created/edited/deleted
+   - Document uploaded/deleted
+   - Feedback provided
+   - Tasks assigned/completed
+   - System settings changed
+
+---
+
+### Alternative Flows
+
+| Scenario | Flow |
+|----------|------|
+| **Email already exists** | System prevents creation with error: "Email already in use". Admin can recover account or use different email. |
+| **Role change request** | Admin can change user role (Student → Professor, etc.). System notifies user of role change. |
+| **Account disable** | Admin can disable user account without deletion. Disabled users cannot log in but data is preserved. |
+| **Bulk user creation** | Admin can import users via CSV file (name, email, role). System validates and creates accounts. |
+| **Export user list** | Admin can export all users or filtered results as CSV. |
+| **Real-time activity** | Admin can view live system activity stream for monitoring. |
+| **No audit logs found** | System displays "No logs matching criteria" message. |
+
+---
+
+### Exceptions
+
+| Exception | Resolution |
+|-----------|-----------|
+| **Database error** | System displays error message and provides retry option. |
+| **Invalid input** | System shows validation error (e.g., "Email format invalid") and prompts correction. |
+| **Duplicate email** | System prevents duplicate email and suggests recovery or alternative. |
+| **User not found** | System updates list and displays "User not found" message. |
+| **Deletion failure** | System retains user account and displays error message. |
+| **Export error** | System shows error and suggests retry or alternative format. |
+| **Requires restart** | System warns if settings changes require application restart. |
+| **Export error** | System shows error and suggests retry or alternative format. |
+| **Requires restart** | System warns if settings changes require application restart. |
+
+---
+

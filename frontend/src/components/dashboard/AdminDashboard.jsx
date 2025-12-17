@@ -84,7 +84,7 @@ const AdminDashboard = ({ onTabChange }) => {
       {/* Quick Actions */}
       <div className="mt-6 bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <button
             onClick={() => onTabChange && onTabChange('users')}
             className="block p-4 border-2 border-blue-500 rounded-lg text-center hover:bg-blue-50 transition cursor-pointer"
@@ -103,8 +103,22 @@ const AdminDashboard = ({ onTabChange }) => {
             onClick={() => onTabChange && onTabChange('audit')}
             className="block p-4 border-2 border-purple-500 rounded-lg text-center hover:bg-purple-50 transition cursor-pointer"
           >
+            <div className="text-2xl mb-2">📋</div>
+            <div className="font-medium">Audit Logs</div>
+          </button>
+          <button
+            onClick={() => onTabChange && onTabChange('reports')}
+            className="block p-4 border-2 border-orange-500 rounded-lg text-center hover:bg-orange-50 transition cursor-pointer"
+          >
             <div className="text-2xl mb-2">📊</div>
-            <div className="font-medium">View Audit Logs</div>
+            <div className="font-medium">System Reports</div>
+          </button>
+          <button
+            onClick={() => onTabChange && onTabChange('settings')}
+            className="block p-4 border-2 border-red-500 rounded-lg text-center hover:bg-red-50 transition cursor-pointer"
+          >
+            <div className="text-2xl mb-2">⚙️</div>
+            <div className="font-medium">System Settings</div>
           </button>
         </div>
       </div>

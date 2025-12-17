@@ -25,7 +25,10 @@ import {
   AdminDashboard,
   UserManagement,
   StudentAssignment,
-  AuditLogViewer
+  AuditLogViewer,
+  StudentAssignmentForm,
+  AdminReports,
+  SystemSettingsForm
 } from '../components/dashboard';
 
 const Dashboard = () => {
@@ -74,6 +77,7 @@ const Dashboard = () => {
     { id: 'users', label: 'User Management', icon: FaUserShield },
     { id: 'assignments', label: 'Student Assignment', icon: FaUsers },
     { id: 'audit', label: 'Audit Logs', icon: FaHistory },
+    { id: 'reports', label: 'System Reports', icon: FaChartBar },
     { id: 'settings', label: 'System Settings', icon: FaCogs },
   ];
 
@@ -372,20 +376,16 @@ const Dashboard = () => {
         return <UserManagement refreshTrigger={refreshTrigger} />;
       
       case 'assignments':
-        return <StudentAssignment refreshTrigger={refreshTrigger} />;
+        return <StudentAssignmentForm />;
       
       case 'audit':
         return <AuditLogViewer />;
       
+      case 'reports':
+        return <AdminReports />;
+      
       case 'settings':
-        return (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <FaCogs className="text-purple-600" /> System Settings
-            </h3>
-            <p className="text-gray-600">System settings management coming soon...</p>
-          </div>
-        );
+        return <SystemSettingsForm />;
 
       default:
         return renderOverview();

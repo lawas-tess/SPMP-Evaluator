@@ -76,6 +76,35 @@ public class SystemSettingsController {
         }
     }
 
+    @PostMapping
+    public ResponseEntity<?> updateMultipleSettings(@RequestBody Map<String, Object> request,
+                                                     Authentication authentication) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Map<String, String>> settingsList = (List<Map<String, String>>) request.get("settings");
+            
+            String username = authentication.getName();
+            User admin = userService.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("Admin not found"));
+
+            List<SystemSetting> updatedSettings = settingsList.stream()
+                    .map(setting -> settingService.updateSetting(
+                            setting.get("key"), 
+                            setting.get("value"), 
+                            admin.getId()))
+                    .collect(Collectors.toList());
+            
+            List<SystemSettingDTO> dtos = updatedSettings.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(dtos);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Failed to update settings: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/maintenance")
     public ResponseEntity<?> toggleMaintenanceMode(@RequestBody Map<String, Boolean> request,
                                                    Authentication authentication) {
