@@ -582,27 +582,6 @@ Decision:
 ```
 
 ### Activity Diagram 5: Admin System Settings
-
-```
-[Start]
-↓
-Admin navigates to System Settings
-↓
-Admin selects settings category
-↓
-Admin modifies configuration values
-↓
-System validates new settings
-↓
-Decision:
-  - If invalid → Show validation error
-  - If valid → Admin confirms changes → System applies settings → System logs change → Settings Updated
-↓
-Decision (Requires Restart?):
-  - Yes → System shows restart warning
-  - No → Settings applied immediately
-↓
-[End]
 ```
 
 ---
@@ -925,6 +904,1922 @@ Decision (Requires Restart?):
 | **Requires restart** | System warns if settings changes require application restart. |
 | **Export error** | System shows error and suggests retry or alternative format. |
 | **Requires restart** | System warns if settings changes require application restart. |
+
+---
+
+---
+
+# System Design Document (SDD) - Role-Based Components
+
+## Format: Detailed Design per Transaction
+
+---
+
+# Module 2 - SDD
+
+## 2.1 Student File Upload (UC 2.1)
+
+### Front-end Component(s)
+
+**Component Name:** `DocumentUpload.jsx`
+
+**Description and purpose:** 
+Drag-and-drop file upload interface with real-time format validation (PDF/DOCX only) and file size verification (maximum 50MB). Displays upload progress, success/error messages, and file metadata.
+
+**Component type or format:** 
+React Functional Component with hooks (useState, useRef, useEffect). Manages file state, upload status, and error handling. Uses Tailwind CSS for styling and integrates with apiService for backend communication.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `DocumentController.java`
+
+**Description and purpose:** 
+REST API controller handling document upload endpoints. Manages file upload requests, delegates business logic to DocumentService, and returns response with uploaded document metadata.
+
+**Component type or format:** 
+Spring Boot REST Controller with `@PostMapping` endpoints. Implements multipart file handling, validation, and error responses. Enforces role-based access control (@PreAuthorize).
+
+---
+
+**Component Name:** `DocumentService.java`
+
+**Description and purpose:** 
+Business logic layer for document processing. Validates file format/size, stores files in filesystem (uploads/documents/), creates SPMPDocument entity, and triggers AI evaluation via OpenRouterService.
+
+**Component type or format:** 
+Spring Service class with business logic methods. Uses DocumentRepository for database operations, OpenRouterService for AI analysis, and FileUtil for file operations.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml DocumentUpload_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class DocumentUpload {
+  - file: File
+  - uploading: boolean
+  - uploadStatus: string
+  - errorMessage: string
+  --
+  + handleDrop(): void
+  + validateFile(): boolean
+  + handleUpload(): void
+}
+
+class DocumentController {
+  - documentService: DocumentService
+  --
+  + uploadDocument(): ResponseEntity
+}
+
+class DocumentService {
+  - documentRepository: DocumentRepository
+  - openRouterService: OpenRouterService
+  --
+  + uploadDocument(): SPMPDocument
+  + validateFile(): boolean
+  + processDocument(): void
+}
+
+class SPMPDocument {
+  - id: Long
+  - fileName: String
+  - fileUrl: String
+  - fileSize: Long
+  - evaluated: boolean
+  - feedback: String
+}
+
+DocumentUpload --> DocumentController
+DocumentController --> DocumentService
+DocumentService --> SPMPDocument
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml DocumentUpload_Sequence
+!theme plain
+participant "Student" as Student
+participant "DocumentUpload" as UI
+participant "DocumentController" as Ctrl
+participant "DocumentService" as Service
+participant "OpenRouterService" as AI
+participant "Database" as DB
+
+Student -> UI: Select File
+activate UI
+UI -> UI: Validate
+activate UI
+UI --> UI: ✓ Valid
+deactivate UI
+UI -> Ctrl: POST /api/documents/upload
+activate Ctrl
+Ctrl -> Service: uploadDocument()
+activate Service
+Service -> Service: validateFile()
+Service -> Service: Save to filesystem
+Service -> AI: analyzeDocument()
+activate AI
+AI --> Service: {score, gaps, recommendations}
+deactivate AI
+Service -> DB: save(SPMPDocument)
+activate DB
+DB --> Service: Success
+deactivate DB
+Service --> Ctrl: SPMPDocument
+deactivate Service
+Ctrl --> UI: ResponseEntity
+deactivate Ctrl
+UI --> Student: Show Success
+deactivate UI
+@enduml
+```
+
+---
+
+### Data Design
+
+**ERD / Schema:**
+```sql
+CREATE TABLE spmp_documents (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    file_name VARCHAR(255) NOT NULL,
+    file_url VARCHAR(500) NOT NULL,
+    file_size BIGINT,
+    file_type VARCHAR(50),
+    evaluated BOOLEAN DEFAULT FALSE,
+    feedback LONGTEXT,
+    user_id BIGINT NOT NULL,
+    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    evaluated_at DATETIME,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_uploaded_at (uploaded_at)
+);
+```
+
+---
+
+## 2.2 Student File Edit (UC 2.2)
+
+### Front-end Component(s)
+
+**Component Name:** `DocumentList.jsx` with `FileReplaceModal.jsx`
+
+**Description and purpose:**
+Displays list of uploaded documents with metadata (file name, size, upload date, status). Provides actions: View Report, Replace (Edit), Delete. FileReplaceModal handles file replacement workflow with validation and confirmation.
+
+**Component type or format:**
+React Functional Component with conditional rendering. Uses state management for document list, selected document, and modal visibility. Integrates with apiService for CRUD operations.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `DocumentController.java` - PUT endpoint
+
+**Description and purpose:**
+REST API endpoint for document replacement. Validates new file, deletes old file, uploads replacement, and triggers re-evaluation.
+
+**Component type or format:**
+Spring Boot REST Controller with `@PutMapping` endpoint. Handles multipart file replacement requests with transaction management.
+
+---
+
+**Component Name:** `DocumentService.java` - replaceDocument()
+
+**Description and purpose:**
+Business logic for replacing uploaded documents. Validates new file, deletes old file from storage, saves new file, updates SPMPDocument entity, and re-evaluates with AI.
+
+**Component type or format:**
+Spring Service class with file operation methods. Uses file utilities for cleanup and DocumentRepository for persistence.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml DocumentEdit_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class DocumentList {
+  - documents: SPMPDocument[]
+  - showModal: boolean
+  --
+  + handleEdit(): void
+  + openReplaceModal(): void
+}
+
+class FileReplaceModal {
+  - selectedFile: File
+  - uploading: boolean
+  --
+  + handleFileSelect(): void
+  + handleConfirm(): void
+}
+
+class DocumentController {
+  - documentService: DocumentService
+  --
+  + replaceDocument(): ResponseEntity
+}
+
+class DocumentService {
+  - documentRepository: DocumentRepository
+  --
+  + replaceDocument(): SPMPDocument
+  + deleteOldFile(): void
+  + saveNewFile(): void
+}
+
+DocumentList --> FileReplaceModal
+FileReplaceModal --> DocumentController
+DocumentController --> DocumentService
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml DocumentEdit_Sequence
+!theme plain
+participant "Student" as Student
+participant "DocumentList" as List
+participant "FileReplaceModal" as Modal
+participant "DocumentController" as Ctrl
+participant "DocumentService" as Service
+participant "FileSystem" as FS
+participant "Database" as DB
+
+Student -> List: Click Edit
+activate List
+List -> Modal: Show Modal
+activate Modal
+Student -> Modal: Select File
+activate Modal
+Modal -> Modal: Validate
+Modal -> Ctrl: PUT /api/documents/{id}
+deactivate Modal
+activate Ctrl
+Ctrl -> Service: replaceDocument(id, newFile)
+activate Service
+Service -> FS: Delete old file
+activate FS
+deactivate FS
+Service -> FS: Save new file
+activate FS
+deactivate FS
+Service -> Service: Analyze new file
+Service -> DB: Update record
+activate DB
+deactivate DB
+Service --> Ctrl: Updated document
+deactivate Service
+Ctrl --> List: Success
+deactivate Ctrl
+List --> Student: Refresh UI
+deactivate List
+@enduml
+```
+
+---
+
+### Data Design
+
+**Schema Changes:**
+```sql
+-- No schema change needed; updates existing spmp_documents record
+ALTER TABLE spmp_documents ADD COLUMN replaced_count INT DEFAULT 0;
+ALTER TABLE spmp_documents ADD COLUMN last_replaced_at DATETIME;
+```
+
+---
+
+## 2.3 Student File Removal (UC 2.3)
+
+### Front-end Component(s)
+
+**Component Name:** `DocumentList.jsx` - Delete action
+
+**Description and purpose:**
+Delete button/action in document list. Shows confirmation dialog before permanent removal. Updates UI after successful deletion.
+
+**Component type or format:**
+React component with conditional rendering and confirmation dialog. Uses apiService to call backend delete endpoint.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `DocumentController.java` - DELETE endpoint
+
+**Description and purpose:**
+REST API endpoint for document deletion. Validates ownership, deletes file from storage and database.
+
+**Component type or format:**
+Spring Boot REST Controller with `@DeleteMapping` endpoint. Includes authorization checks.
+
+---
+
+**Component Name:** `DocumentService.java` - deleteDocument()
+
+**Description and purpose:**
+Business logic for document deletion. Verifies user ownership, deletes physical file, and removes database record.
+
+**Component type or format:**
+Spring Service class with file and database cleanup logic.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml DocumentDelete_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class DocumentList {
+  - documents: SPMPDocument[]
+  --
+  + handleDelete(): void
+  + showConfirmation(): void
+}
+
+class DocumentController {
+  - documentService: DocumentService
+  --
+  + deleteDocument(): ResponseEntity
+}
+
+class DocumentService {
+  - documentRepository: DocumentRepository
+  --
+  + deleteDocument(): boolean
+  + verifyOwnership(): boolean
+  + deletePhysicalFile(): void
+}
+
+DocumentList --> DocumentController
+DocumentController --> DocumentService
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml DocumentDelete_Sequence
+!theme plain
+participant "Student" as Student
+participant "DocumentList" as List
+participant "DocumentController" as Ctrl
+participant "DocumentService" as Service
+participant "FileSystem" as FS
+participant "Database" as DB
+
+Student -> List: Click Delete
+activate List
+List -> List: Show Confirmation
+activate List
+deactivate List
+Student -> List: Confirm Delete
+activate List
+List -> Ctrl: DELETE /api/documents/{id}
+activate Ctrl
+Ctrl -> Service: deleteDocument(id)
+activate Service
+Service -> Service: Verify ownership
+Service -> FS: Delete file
+activate FS
+deactivate FS
+Service -> DB: Remove record
+activate DB
+deactivate DB
+Service --> Ctrl: Success
+deactivate Service
+Ctrl --> List: Success
+deactivate Ctrl
+List --> Student: Refresh & show success
+deactivate List
+@enduml
+```
+
+---
+
+## 2.4 Student View Feedback (UC 2.4)
+
+### Front-end Component(s)
+
+**Component Name:** `EvaluationResults.jsx` + `ParserFeedback.jsx`
+
+**Description and purpose:**
+Displays AI evaluation results including compliance score, detected clauses, missing clauses, and recommendations. ParserFeedback shows detailed feedback broken down by section.
+
+**Component type or format:**
+React Functional Component displaying JSON feedback from ParserFeedback entity. Uses charts/visualizations for score display.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `ParserFeedbackService.java`
+
+**Description and purpose:**
+Orchestrates AI analysis via OpenRouterService and stores structured feedback in ParserFeedback entity.
+
+**Component type or format:**
+Spring Service class that integrates with OpenRouterService for IEEE 1058 compliance analysis.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml ViewFeedback_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class EvaluationResults {
+  - document: SPMPDocument
+  - feedback: JSON
+  --
+  + displayScore(): void
+  + showRecommendations(): void
+}
+
+class ParserFeedback {
+  - feedbackData: JSON
+  --
+  + renderSectionFeedback(): void
+  + renderRecommendations(): void
+}
+
+class DocumentController {
+  - documentService: DocumentService
+  --
+  + getDocumentFeedback(): ResponseEntity
+}
+
+class ParserFeedbackService {
+  - parserFeedbackRepository: ParserFeedbackRepository
+  --
+  + generateFeedback(): ParserFeedback
+  + analyzeDocument(): Map
+}
+
+EvaluationResults --> ParserFeedback
+DocumentController --> ParserFeedbackService
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml ViewFeedback_Sequence
+!theme plain
+participant "Student" as Student
+participant "DocumentList" as List
+participant "EvaluationResults" as Results
+participant "DocumentController" as Ctrl
+participant "ParserFeedbackService" as Service
+participant "Database" as DB
+
+Student -> List: Click View Report
+activate List
+List -> Results: Load feedback
+activate Results
+Results -> Ctrl: GET /api/documents/{id}/feedback
+activate Ctrl
+Ctrl -> Service: getDocumentFeedback(id)
+activate Service
+Service -> DB: Query ParserFeedback
+activate DB
+DB --> Service: {score, gaps, recommendations}
+deactivate DB
+Service --> Ctrl: Feedback object
+deactivate Service
+Ctrl --> Results: Response
+deactivate Ctrl
+Results -> Results: Parse & render
+activate Results
+Results --> Results: Display score & clauses
+deactivate Results
+Results --> List: Rendered report
+deactivate Results
+List --> Student: Show evaluation
+deactivate List
+@enduml
+```
+
+---
+
+**Schema:**
+```sql
+CREATE TABLE parser_feedback (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    document_id BIGINT NOT NULL,
+    compliance_score DOUBLE,
+    feedback_json LONGTEXT,
+    created_at DATETIME,
+    FOREIGN KEY (document_id) REFERENCES spmp_documents(id) ON DELETE CASCADE
+);
+```
+
+---
+
+## 2.5 Student Task Tracking (UC 2.5)
+
+### Front-end Component(s)
+
+**Component Name:** `TaskTracker.jsx`
+
+**Description and purpose:**
+Dashboard showing assigned tasks with filtering (Pending, In Progress, Completed, Overdue), sorting, and deadline highlighting. Displays task progress statistics.
+
+**Component type or format:**
+React Functional Component with state management. Uses date/time utilities for deadline calculations.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `TaskController.java`
+
+**Description and purpose:**
+REST endpoints for retrieving student's assigned tasks and updating task status.
+
+**Component type or format:**
+Spring Boot REST Controller with `@GetMapping` and `@PutMapping` endpoints.
+
+---
+
+**Component Name:** `TaskService.java`
+
+**Description and purpose:**
+Business logic for task retrieval, filtering, and status management. Calculates deadline status.
+
+**Component type or format:**
+Spring Service class with task query and calculation logic.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml TaskTracking_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class TaskTracker {
+  - tasks: Task[]
+  - filter: string
+  - statistics: Statistics
+  --
+  + filterByStatus(): Task[]
+  + calculateStats(): Statistics
+  + markComplete(): void
+}
+
+class TaskCard {
+  - task: Task
+  - isOverdue: boolean
+  --
+  + displayTask(): void
+  + highlightDeadline(): void
+}
+
+class TaskController {
+  - taskService: TaskService
+  --
+  + getMyTasks(): ResponseEntity
+  + updateTaskStatus(): ResponseEntity
+}
+
+class TaskService {
+  - taskRepository: TaskRepository
+  --
+  + getStudentTasks(): List
+  + updateTaskStatus(): Task
+  + calculateDeadlineStatus(): String
+}
+
+TaskTracker --> TaskCard
+TaskCard --> Task
+TaskController --> TaskService
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml TaskTracking_Sequence
+!theme plain
+participant "Student" as Student
+participant "TaskTracker" as Tracker
+participant "TaskCard" as Card
+participant "TaskController" as Ctrl
+participant "TaskService" as Service
+participant "Database" as DB
+
+Student -> Tracker: Load Dashboard
+activate Tracker
+Tracker -> Ctrl: GET /api/tasks
+activate Ctrl
+Ctrl -> Service: getStudentTasks()
+activate Service
+Service -> DB: Query tasks
+activate DB
+DB --> Service: List<Task>
+deactivate DB
+Service -> Service: Calculate status
+Service --> Ctrl: Tasks
+deactivate Service
+Ctrl --> Tracker: Response
+deactivate Ctrl
+Tracker -> Card: Render tasks
+activate Card
+Card -> Card: Check deadlines
+Card --> Tracker: Rendered
+deactivate Card
+Tracker --> Student: Display dashboard
+deactivate Tracker
+
+Student -> Card: Mark Complete
+activate Card
+Card -> Ctrl: PUT /api/tasks/{id}/status
+activate Ctrl
+Ctrl -> Service: updateTaskStatus(COMPLETED)
+activate Service
+Service -> DB: Update
+activate DB
+deactivate DB
+Service --> Ctrl: Updated
+deactivate Service
+Ctrl --> Card: Success
+deactivate Ctrl
+Card --> Tracker: Refresh
+activate Tracker
+Tracker --> Student: Show updated
+deactivate Tracker
+deactivate Card
+@enduml
+```
+
+---
+
+**Schema:**
+```sql
+CREATE TABLE tasks (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description LONGTEXT,
+    deadline DATETIME NOT NULL,
+    is_completed BOOLEAN DEFAULT FALSE,
+    completion_date DATE,
+    assigned_to_user_id BIGINT NOT NULL,
+    created_by_user_id BIGINT NOT NULL,
+    priority ENUM('LOW', 'MEDIUM', 'HIGH') DEFAULT 'MEDIUM',
+    status ENUM('PENDING', 'IN_PROGRESS', 'COMPLETED') DEFAULT 'PENDING',
+    created_at DATETIME,
+    
+    FOREIGN KEY (assigned_to_user_id) REFERENCES users(id),
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id),
+    INDEX idx_assigned_to (assigned_to_user_id),
+    INDEX idx_deadline (deadline)
+);
+```
+
+---
+
+## 2.6 Professor Task Creation (UC 2.6)
+
+### Front-end Component(s)
+
+**Component Name:** `TaskManager.jsx`
+
+**Description and purpose:**
+Form interface for professors to create new tasks with title, description, deadline, and student assignment options. Includes validation and preview before submission.
+
+**Component type or format:**
+React Functional Component with form state management. Integrates with apiService for task submission and student list retrieval.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `TaskController.java` - POST endpoint
+
+**Description and purpose:**
+REST endpoint for creating new tasks. Validates task data and persists to database.
+
+**Component type or format:**
+Spring Boot REST Controller with `@PostMapping` endpoint. Includes authorization checks for professor role.
+
+---
+
+**Component Name:** `TaskService.java` - createTask()
+
+**Description and purpose:**
+Business logic for task creation. Validates deadline, creates Task entity, and notifies assigned students.
+
+**Component type or format:**
+Spring Service class with task creation and notification logic.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml TaskCreation_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class TaskManager {
+  - taskForm: FormData
+  - selectedStudents: User[]
+  --
+  + handleCreateTask(): void
+  + validateDeadline(): boolean
+}
+
+class TaskController {
+  - taskService: TaskService
+  --
+  + createTask(): ResponseEntity
+  + getStudentList(): ResponseEntity
+}
+
+class TaskService {
+  - taskRepository: TaskRepository
+  - notificationService: NotificationService
+  --
+  + createTask(): Task
+  + validateTask(): boolean
+  + notifyStudents(): void
+}
+
+class Task {
+  - id: Long
+  - title: String
+  - description: String
+  - deadline: LocalDateTime
+  - createdBy: User
+}
+
+TaskManager --> TaskController
+TaskController --> TaskService
+TaskService --> Task
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml TaskCreation_Sequence
+!theme plain
+participant "Professor" as Prof
+participant "TaskManager" as UI
+participant "TaskController" as Ctrl
+participant "TaskService" as Service
+participant "Database" as DB
+participant "Notification" as Notif
+
+Prof -> UI: Fill Task Form
+activate UI
+UI -> UI: Validate
+UI -> Ctrl: POST /api/tasks
+activate Ctrl
+Ctrl -> Service: createTask()
+activate Service
+Service -> Service: Validate deadline
+Service -> DB: save(Task)
+activate DB
+deactivate DB
+Service -> Notif: notifyStudents()
+activate Notif
+deactivate Notif
+Service --> Ctrl: Created task
+deactivate Service
+Ctrl --> UI: ResponseEntity
+deactivate Ctrl
+UI --> Prof: Show success
+deactivate UI
+@enduml
+```
+
+---
+
+## 2.7 Professor Supplement Grading Criteria (UC 2.7)
+
+### Front-end Component(s)
+
+**Component Name:** `GradingCriteria.jsx`
+
+**Description and purpose:**
+Interface for professors to define custom grading criteria with weightings. Displays criteria list and allows add/edit/delete operations.
+
+**Component type or format:**
+React Functional Component with criteria state management and inline editing capabilities.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `GradingCriteriaService.java`
+
+**Description and purpose:**
+Business logic for managing custom grading criteria. Stores criteria and applies to evaluations.
+
+**Component type or format:**
+Spring Service class with criteria CRUD operations.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml GradingCriteria_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class GradingCriteria {
+  - criteriaForm: FormData
+  - criteriaList: Criteria[]
+  --
+  + handleAddCriteria(): void
+  + handleDeleteCriteria(): void
+}
+
+class CriteriaService {
+  - criteriaRepository: CriteriaRepository
+  --
+  + saveCriteria(): Criteria
+  + getCriteriaByProfessor(): List
+  + applyToEvaluation(): Map
+}
+
+class Criteria {
+  - id: Long
+  - name: String
+  - weight: Double
+  - maxScore: Double
+  - professor: User
+}
+
+GradingCriteria --> CriteriaService
+CriteriaService --> Criteria
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml GradingCriteria_Sequence
+!theme plain
+participant "Professor" as Prof
+participant "GradingCriteria" as UI
+participant "CriteriaService" as Service
+participant "Database" as DB
+
+Prof -> UI: Add Criteria
+activate UI
+UI -> UI: Validate inputs
+UI -> Service: saveCriteria()
+activate Service
+Service -> DB: persist(Criteria)
+activate DB
+deactivate DB
+Service --> UI: Success
+deactivate Service
+UI --> Prof: Refresh list
+deactivate UI
+@enduml
+```
+
+---
+
+## 2.8 Professor Override AI Results (UC 2.8)
+
+### Front-end Component(s)
+
+**Component Name:** `ScoreOverride.jsx`
+
+**Description and purpose:**
+Interface showing AI evaluation results with ability to override scores and add justification comments.
+
+**Component type or format:**
+React Component displaying evaluation data with input fields for manual adjustments.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `ScoreOverrideService.java`
+
+**Description and purpose:**
+Business logic for handling score overrides. Validates overrides and maintains audit trail.
+
+**Component type or format:**
+Spring Service class with override validation and audit logging.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml ScoreOverride_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class ScoreOverride {
+  - originalScore: Double
+  - newScore: Double
+  - justification: String
+  --
+  + handleScoreChange(): void
+  + submitOverride(): void
+}
+
+class ScoreOverrideService {
+  - feedbackRepository: ParserFeedbackRepository
+  - auditLog: AuditLogService
+  --
+  + overrideScore(): ParserFeedback
+  + validateOverride(): boolean
+  + logOverride(): void
+}
+
+class ParserFeedback {
+  - complianceScore: Double
+  - overriddenScore: Double
+  - override Justification: String
+}
+
+ScoreOverride --> ScoreOverrideService
+ScoreOverrideService --> ParserFeedback
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml ScoreOverride_Sequence
+!theme plain
+participant "Professor" as Prof
+participant "ScoreOverride" as UI
+participant "ScoreOverrideService" as Service
+participant "AuditLog" as Audit
+participant "Database" as DB
+
+Prof -> UI: Enter override score
+activate UI
+UI -> UI: Validate range
+UI -> Service: overrideScore()
+activate Service
+Service -> Service: Validate override
+Service -> Audit: logOverride()
+activate Audit
+deactivate Audit
+Service -> DB: Update feedback
+activate DB
+deactivate DB
+Service --> UI: Success
+deactivate Service
+UI --> Prof: Confirm override
+deactivate UI
+@enduml
+```
+
+---
+
+## 2.9 Professor Update Tasks (UC 2.9)
+
+### Front-end Component(s)
+
+**Component Name:** `TaskManager.jsx` - Edit mode
+
+**Description and purpose:**
+Form interface for editing existing task details like instructions, deadlines, and student assignments.
+
+**Component type or format:**
+React Component with task data pre-population and update submission.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `TaskController.java` - PUT endpoint
+
+**Description and purpose:**
+REST endpoint for task updates. Validates changes and notifies affected students.
+
+**Component type or format:**
+Spring Boot REST Controller with `@PutMapping` endpoint.
+
+---
+
+**Component Name:** `TaskService.java` - updateTask()
+
+**Description and purpose:**
+Business logic for task updates. Handles deadline changes, student assignments, and notifications.
+
+**Component type or format:**
+Spring Service class with task update and notification logic.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml TaskUpdate_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class TaskManager {
+  - taskData: Task
+  - editMode: boolean
+  --
+  + loadTaskData(): void
+  + handleUpdateTask(): void
+}
+
+class TaskController {
+  - taskService: TaskService
+  --
+  + updateTask(): ResponseEntity
+}
+
+class TaskService {
+  - taskRepository: TaskRepository
+  - notificationService: NotificationService
+  --
+  + updateTask(): Task
+  + validateChanges(): boolean
+  + notifyChanges(): void
+}
+
+class Task {
+  - id: Long
+  - title: String
+  - description: String
+  - deadline: LocalDateTime
+  - modifiedAt: LocalDateTime
+}
+
+TaskManager --> TaskController
+TaskController --> TaskService
+TaskService --> Task
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml TaskUpdate_Sequence
+!theme plain
+participant "Professor" as Prof
+participant "TaskManager" as UI
+participant "TaskController" as Ctrl
+participant "TaskService" as Service
+participant "Database" as DB
+participant "Notification" as Notif
+
+Prof -> UI: Edit Task
+activate UI
+UI -> UI: Load task data
+UI -> UI: Modify fields
+UI -> Ctrl: PUT /api/tasks/{id}
+activate Ctrl
+Ctrl -> Service: updateTask()
+activate Service
+Service -> Service: Validate changes
+Service -> DB: Update record
+activate DB
+deactivate DB
+Service -> Notif: notifyStudents()
+activate Notif
+deactivate Notif
+Service --> Ctrl: Updated task
+deactivate Service
+Ctrl --> UI: Success
+deactivate Ctrl
+UI --> Prof: Confirm update
+deactivate UI
+@enduml
+```
+
+---
+
+## 2.10 Professor Monitor Student Progress (UC 2.10)
+
+### Front-end Component(s)
+
+**Component Name:** `StudentProgress.jsx`
+
+**Description and purpose:**
+Dashboard showing student submission status, evaluation scores, and progress statistics with filtering and sorting options.
+
+**Component type or format:**
+React Component with data visualization and filtering capabilities.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `ProgressController.java`
+
+**Description and purpose:**
+REST endpoints for retrieving student progress data and statistics.
+
+**Component type or format:**
+Spring Boot REST Controller with `@GetMapping` endpoints.
+
+---
+
+**Component Name:** `ProgressService.java`
+
+**Description and purpose:**
+Business logic for aggregating and calculating progress metrics.
+
+**Component type or format:**
+Spring Service class with data aggregation logic.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml StudentProgress_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class StudentProgress {
+  - students: Student[]
+  - statistics: Statistics
+  - filters: FilterCriteria
+  --
+  + filterByStatus(): void
+  + calculateStats(): Statistics
+}
+
+class ProgressController {
+  - progressService: ProgressService
+  --
+  + getClassProgress(): ResponseEntity
+  + getStudentMetrics(): ResponseEntity
+}
+
+class ProgressService {
+  - documentRepository: DocumentRepository
+  - taskRepository: TaskRepository
+  --
+  + getClassProgress(): ProgressData
+  + calculateMetrics(): Statistics
+  + aggregateScores(): Map
+}
+
+StudentProgress --> ProgressController
+ProgressController --> ProgressService
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml StudentProgress_Sequence
+!theme plain
+participant "Professor" as Prof
+participant "StudentProgress" as UI
+participant "ProgressController" as Ctrl
+participant "ProgressService" as Service
+participant "Database" as DB
+
+Prof -> UI: Open Progress
+activate UI
+UI -> Ctrl: GET /api/progress/class
+activate Ctrl
+Ctrl -> Service: getClassProgress()
+activate Service
+Service -> DB: Query submissions
+activate DB
+deactivate DB
+Service -> DB: Query evaluations
+activate DB
+deactivate DB
+Service -> Service: Calculate metrics
+Service --> Ctrl: Progress data
+deactivate Service
+Ctrl --> UI: Response
+deactivate Ctrl
+UI -> UI: Render dashboard
+UI --> Prof: Display progress
+deactivate UI
+@enduml
+```
+
+---
+
+## 2.11 Admin User Management (UC 2.11)
+
+### Front-end Component(s)
+
+**Component Name:** `UserManagement.jsx`
+
+**Description and purpose:**
+Admin interface for viewing, creating, editing, and deleting user accounts with role assignment and status management.
+
+**Component type or format:**
+React Component with user list display, modal forms for CRUD operations, and search/filter capabilities.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `AdminUserController.java`
+
+**Description and purpose:**
+REST endpoints for user CRUD operations. Enforces admin authorization and validates user data.
+
+**Component type or format:**
+Spring Boot REST Controller with `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping` endpoints.
+
+---
+
+**Component Name:** `AdminUserService.java`
+
+**Description and purpose:**
+Business logic for user management including validation, password management, and audit logging.
+
+**Component type or format:**
+Spring Service class with user lifecycle management.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml UserManagement_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class UserManagement {
+  - userList: User[]
+  - filters: FilterCriteria
+  --
+  + handleCreateUser(): void
+  + handleEditUser(): void
+  + handleDeleteUser(): void
+}
+
+class AdminUserController {
+  - adminUserService: AdminUserService
+  --
+  + getAllUsers(): ResponseEntity
+  + createUser(): ResponseEntity
+  + updateUser(): ResponseEntity
+  + deleteUser(): ResponseEntity
+}
+
+class AdminUserService {
+  - userRepository: UserRepository
+  - passwordEncoder: PasswordEncoder
+  - auditLog: AuditLogService
+  --
+  + createUser(): User
+  + updateUser(): User
+  + deleteUser(): boolean
+  + validateUser(): boolean
+}
+
+class User {
+  - id: Long
+  - email: String
+  - role: Role
+  - status: Status
+  - createdAt: LocalDateTime
+}
+
+UserManagement --> AdminUserController
+AdminUserController --> AdminUserService
+AdminUserService --> User
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml UserManagement_Sequence
+!theme plain
+participant "Admin" as Admin
+participant "UserManagement" as UI
+participant "AdminUserController" as Ctrl
+participant "AdminUserService" as Service
+participant "Database" as DB
+participant "Audit" as AuditLog
+
+Admin -> UI: Open User Management
+activate UI
+UI -> Ctrl: GET /api/admin/users
+activate Ctrl
+Ctrl -> Service: getAllUsers()
+activate Service
+Service -> DB: Query users
+activate DB
+DB --> Service: List<User>
+deactivate DB
+Service --> Ctrl: Users
+deactivate Service
+Ctrl --> UI: Response
+deactivate Ctrl
+UI --> Admin: Display user list
+deactivate UI
+
+Admin -> UI: Create User
+activate UI
+UI -> Ctrl: POST /api/admin/users
+activate Ctrl
+Ctrl -> Service: createUser()
+activate Service
+Service -> Service: Validate input
+Service -> DB: persist(User)
+activate DB
+deactivate DB
+Service -> AuditLog: logCreation()
+activate AuditLog
+deactivate AuditLog
+Service --> Ctrl: Created user
+deactivate Service
+Ctrl --> UI: Success
+deactivate Ctrl
+UI --> Admin: Confirm creation
+deactivate UI
+@enduml
+```
+
+---
+
+## 2.12 Admin Student Assignment (UC 2.12)
+
+### Front-end Component(s)
+
+**Component Name:** `StudentAssignmentForm.jsx`
+
+**Description and purpose:**
+Form interface for assigning students to professors with bulk assignment options and confirmation dialogs.
+
+**Component type or format:**
+React Component with multi-select dropdown and assignment submission.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `AssignmentController.java`
+
+**Description and purpose:**
+REST endpoints for creating and managing student-professor assignments.
+
+**Component type or format:**
+Spring Boot REST Controller with assignment CRUD endpoints.
+
+---
+
+**Component Name:** `AssignmentService.java`
+
+**Description and purpose:**
+Business logic for assignment management and notification of assigned parties.
+
+**Component type or format:**
+Spring Service class with assignment creation and notification logic.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml StudentAssignment_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class StudentAssignmentForm {
+  - selectedProfessor: User
+  - selectedStudents: User[]
+  --
+  + handleAssign(): void
+  + handleBulkAssign(): void
+}
+
+class AssignmentController {
+  - assignmentService: AssignmentService
+  --
+  + assignStudent(): ResponseEntity
+  + bulkAssign(): ResponseEntity
+}
+
+class AssignmentService {
+  - assignmentRepository: AssignmentRepository
+  - notificationService: NotificationService
+  --
+  + assignStudent(): Assignment
+  + bulkAssign(): List
+  + notifyParties(): void
+}
+
+class Assignment {
+  - id: Long
+  - student: User
+  - professor: User
+  - assignedAt: LocalDateTime
+}
+
+StudentAssignmentForm --> AssignmentController
+AssignmentController --> AssignmentService
+AssignmentService --> Assignment
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml StudentAssignment_Sequence
+!theme plain
+participant "Admin" as Admin
+participant "AssignmentForm" as UI
+participant "AssignmentController" as Ctrl
+participant "AssignmentService" as Service
+participant "Database" as DB
+participant "Notification" as Notif
+
+Admin -> UI: Select Professor & Students
+activate UI
+UI -> UI: Validate selections
+UI -> Ctrl: POST /api/admin/assignments
+activate Ctrl
+Ctrl -> Service: assignStudent()
+activate Service
+Service -> Service: Verify users exist
+Service -> DB: persist(Assignment)
+activate DB
+deactivate DB
+Service -> Notif: notifyProfessor()
+activate Notif
+deactivate Notif
+Service -> Notif: notifyStudent()
+activate Notif
+deactivate Notif
+Service --> Ctrl: Assignment created
+deactivate Service
+Ctrl --> UI: Success
+deactivate Ctrl
+UI --> Admin: Confirm assignment
+deactivate UI
+@enduml
+```
+
+---
+
+## 2.13 Admin View Audit Logs (UC 2.13)
+
+### Front-end Component(s)
+
+**Component Name:** `AuditLogViewer.jsx`
+
+**Description and purpose:**
+Interface for viewing paginated audit logs with filtering by date, user, and action type. Supports log export to CSV/PDF.
+
+**Component type or format:**
+React Component with table display, date pickers, and export functionality.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `AuditLogController.java`
+
+**Description and purpose:**
+REST endpoints for retrieving audit logs with filtering and pagination.
+
+**Component type or format:**
+Spring Boot REST Controller with `@GetMapping` endpoints for log retrieval.
+
+---
+
+**Component Name:** `AuditLogService.java`
+
+**Description and purpose:**
+Business logic for audit log retrieval, filtering, and export operations.
+
+**Component type or format:**
+Spring Service class with log querying and export logic.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml AuditLogViewer_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class AuditLogViewer {
+  - logs: AuditLog[]
+  - filters: FilterCriteria
+  - pagination: PaginationData
+  --
+  + filterByDate(): void
+  + filterByUser(): void
+  + exportLogs(): void
+}
+
+class AuditLogController {
+  - auditLogService: AuditLogService
+  --
+  + getLogs(): ResponseEntity
+  + exportLogs(): ResponseEntity
+}
+
+class AuditLogService {
+  - auditLogRepository: AuditLogRepository
+  - exportService: ExportService
+  --
+  + getLogs(): Page
+  + filterLogs(): List
+  + exportToCSV(): File
+}
+
+class AuditLog {
+  - id: Long
+  - user: User
+  - action: String
+  - resource: String
+  - timestamp: LocalDateTime
+}
+
+AuditLogViewer --> AuditLogController
+AuditLogController --> AuditLogService
+AuditLogService --> AuditLog
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml AuditLogViewer_Sequence
+!theme plain
+participant "Admin" as Admin
+participant "AuditLogViewer" as UI
+participant "AuditLogController" as Ctrl
+participant "AuditLogService" as Service
+participant "Database" as DB
+
+Admin -> UI: Open Audit Logs
+activate UI
+UI -> Ctrl: GET /api/admin/audit-logs
+activate Ctrl
+Ctrl -> Service: getLogs()
+activate Service
+Service -> DB: Query logs
+activate DB
+DB --> Service: Page<AuditLog>
+deactivate DB
+Service --> Ctrl: Logs
+deactivate Service
+Ctrl --> UI: Response
+deactivate Ctrl
+UI --> Admin: Display logs
+deactivate UI
+
+Admin -> UI: Filter by Date
+activate UI
+UI -> Ctrl: GET /api/admin/audit-logs?startDate=X&endDate=Y
+activate Ctrl
+Ctrl -> Service: filterLogs()
+activate Service
+Service -> DB: Query with filters
+activate DB
+deactivate DB
+Service --> Ctrl: Filtered logs
+deactivate Service
+Ctrl --> UI: Response
+deactivate Ctrl
+UI --> Admin: Update display
+deactivate UI
+@enduml
+```
+
+---
+
+## 2.14 Admin System Reports (UC 2.14)
+
+### Front-end Component(s)
+
+**Component Name:** `AdminReports.jsx`
+
+**Description and purpose:**
+Dashboard for generating system reports with visualizations, including user statistics, submission trends, and evaluation metrics.
+
+**Component type or format:**
+React Component with chart rendering, parameter selection, and export options.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `ReportController.java`
+
+**Description and purpose:**
+REST endpoints for report generation with various metrics and data aggregation.
+
+**Component type or format:**
+Spring Boot REST Controller with report generation endpoints.
+
+---
+
+**Component Name:** `ReportService.java`
+
+**Description and purpose:**
+Business logic for calculating report metrics, data aggregation, and statistical analysis.
+
+**Component type or format:**
+Spring Service class with complex aggregation queries.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml AdminReports_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class AdminReports {
+  - reportType: String
+  - dateRange: DateRange
+  - reportData: ReportData
+  --
+  + generateReport(): void
+  + exportReport(): void
+}
+
+class ReportController {
+  - reportService: ReportService
+  --
+  + generateReport(): ResponseEntity
+  + exportReport(): ResponseEntity
+}
+
+class ReportService {
+  - documentRepository: DocumentRepository
+  - userRepository: UserRepository
+  - taskRepository: TaskRepository
+  --
+  + generateUserStats(): Map
+  + generateSubmissionTrends(): List
+  + generateEvaluationMetrics(): Map
+}
+
+AdminReports --> ReportController
+ReportController --> ReportService
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml AdminReports_Sequence
+!theme plain
+participant "Admin" as Admin
+participant "AdminReports" as UI
+participant "ReportController" as Ctrl
+participant "ReportService" as Service
+participant "Database" as DB
+
+Admin -> UI: Select Report Type
+activate UI
+UI -> UI: Set parameters
+UI -> Ctrl: GET /api/admin/reports/{type}
+activate Ctrl
+Ctrl -> Service: generateReport()
+activate Service
+Service -> DB: Query data
+activate DB
+deactivate DB
+Service -> Service: Aggregate metrics
+Service --> Ctrl: Report data
+deactivate Service
+Ctrl --> UI: Response
+deactivate Ctrl
+UI -> UI: Render charts
+UI --> Admin: Display report
+deactivate UI
+
+Admin -> UI: Export Report
+activate UI
+UI -> Ctrl: GET /api/admin/reports/{type}/export
+activate Ctrl
+Ctrl -> Service: exportReport()
+activate Service
+Service -> Service: Format data
+Service --> Ctrl: File
+deactivate Service
+Ctrl --> UI: Download
+deactivate Ctrl
+UI --> Admin: File saved
+deactivate UI
+@enduml
+```
+
+---
+
+## 2.15 Admin System Settings (UC 2.15)
+
+### Front-end Component(s)
+
+**Component Name:** `SystemSettingsForm.jsx`
+
+**Description and purpose:**
+Form interface for managing system-wide settings including registration controls, evaluation parameters, and notification settings.
+
+**Component type or format:**
+React Component with settings form, validation, and save confirmation.
+
+---
+
+### Back-end Component(s)
+
+**Component Name:** `SystemSettingController.java`
+
+**Description and purpose:**
+REST endpoints for system settings CRUD operations with validation.
+
+**Component type or format:**
+Spring Boot REST Controller with settings management endpoints.
+
+---
+
+**Component Name:** `SystemSettingService.java`
+
+**Description and purpose:**
+Business logic for settings management, validation, and application of changes.
+
+**Component type or format:**
+Spring Service class with settings persistence and validation.
+
+---
+
+### Object-Oriented Components
+
+**Class Diagram:**
+```plantuml
+@startuml SystemSettings_ClassDiagram
+!theme plain
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+
+class SystemSettingsForm {
+  - settings: Map<String, Object>
+  - changes: Map<String, Object>
+  --
+  + handleSettingChange(): void
+  + submitSettings(): void
+}
+
+class SystemSettingController {
+  - systemSettingService: SystemSettingService
+  --
+  + getSettings(): ResponseEntity
+  + updateSettings(): ResponseEntity
+}
+
+class SystemSettingService {
+  - settingRepository: SystemSettingRepository
+  - configCache: ConfigCache
+  --
+  + getSettings(): Map
+  + updateSettings(): boolean
+  + validateSetting(): boolean
+}
+
+class SystemSetting {
+  - id: Long
+  - key: String
+  - value: String
+  - dataType: String
+  - updatedAt: LocalDateTime
+}
+
+SystemSettingsForm --> SystemSettingController
+SystemSettingController --> SystemSettingService
+SystemSettingService --> SystemSetting
+@enduml
+```
+
+**Sequence Diagram:**
+```plantuml
+@startuml SystemSettings_Sequence
+!theme plain
+participant "Admin" as Admin
+participant "SettingsForm" as UI
+participant "SettingController" as Ctrl
+participant "SettingService" as Service
+participant "Database" as DB
+participant "Cache" as Cache
+
+Admin -> UI: Open Settings
+activate UI
+UI -> Ctrl: GET /api/admin/settings
+activate Ctrl
+Ctrl -> Service: getSettings()
+activate Service
+Service -> Cache: Check cache
+Service -> DB: Query settings
+activate DB
+DB --> Service: Settings
+deactivate DB
+Service -> Cache: Update cache
+Service --> Ctrl: Settings
+deactivate Service
+Ctrl --> UI: Response
+deactivate Ctrl
+UI --> Admin: Display form
+deactivate UI
+
+Admin -> UI: Modify Settings
+activate UI
+UI -> UI: Validate input
+UI -> Ctrl: POST /api/admin/settings
+activate Ctrl
+Ctrl -> Service: updateSettings()
+activate Service
+Service -> Service: Validate all settings
+Service -> DB: Batch update
+activate DB
+deactivate DB
+Service -> Cache: Refresh cache
+Service --> Ctrl: Success
+deactivate Service
+Ctrl --> UI: Confirm
+deactivate Ctrl
+UI --> Admin: Show success
+deactivate UI
+@enduml
+```
+
+---
+
+**Data Design:**
+
+```sql
+CREATE TABLE system_settings (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    key VARCHAR(255) NOT NULL UNIQUE,
+    value LONGTEXT,
+    data_type ENUM('STRING', 'INTEGER', 'BOOLEAN', 'DOUBLE') DEFAULT 'STRING',
+    description VARCHAR(500),
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_by BIGINT,
+    
+    INDEX idx_key (key),
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+```
 
 ---
 
