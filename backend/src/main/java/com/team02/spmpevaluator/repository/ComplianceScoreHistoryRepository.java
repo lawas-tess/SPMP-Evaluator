@@ -11,4 +11,6 @@ public interface ComplianceScoreHistoryRepository extends JpaRepository<Complian
     List<ComplianceScoreHistory> findByDocumentIdOrderByRecordedAtDesc(Long documentId);
 
     int countByDocumentId(Long documentId);
+    
+    void deleteByDocumentId(Long documentId);
 }

@@ -150,7 +150,7 @@ const ParserFeedback = ({ documentId }) => {
         <h3 className="text-xl font-semibold mb-4">Overall Compliance Score</h3>
         <div className="flex items-center justify-center">
           <div className={`text-6xl font-bold ${getScoreColor(feedback.complianceScore)} ${getScoreBgColor(feedback.complianceScore)} rounded-full w-40 h-40 flex items-center justify-center`}>
-            {feedback.complianceScore}%
+            {Math.round(feedback.complianceScore)}%
           </div>
         </div>
         <div className="mt-4 text-center text-sm text-gray-600">

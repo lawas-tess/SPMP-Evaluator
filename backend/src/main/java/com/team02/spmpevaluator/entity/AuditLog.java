@@ -20,11 +20,11 @@ public class AuditLog {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50)
     @Enumerated(EnumType.STRING)
     private ActionType action;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50)
     @Enumerated(EnumType.STRING)
     private ResourceType resourceType;
 
@@ -46,10 +46,19 @@ public class AuditLog {
     }
 
     public enum ActionType {
-        LOGIN, LOGOUT, UPLOAD, DOWNLOAD, VIEW, EVALUATE, OVERRIDE, CREATE, UPDATE, DELETE
+        // Authentication Actions
+        LOGIN, LOGOUT, REGISTER,
+        // Document Actions
+        UPLOAD, DOWNLOAD, VIEW, EVALUATE, OVERRIDE,
+        // CRUD Actions
+        CREATE, UPDATE, DELETE,
+        // Admin Actions
+        ASSIGN, RESET_PASSWORD, LOCK_ACCOUNT, UNLOCK_ACCOUNT,
+        // System Actions
+        EXPORT, IMPORT
     }
 
     public enum ResourceType {
-        USER, DOCUMENT, TASK, EVALUATION
+        USER, DOCUMENT, TASK, EVALUATION, GRADING_CRITERIA, NOTIFICATION, SYSTEM
     }
 }

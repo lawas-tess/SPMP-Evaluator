@@ -29,6 +29,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     List<Notification> findByUserIdAndReadFalseOrderByCreatedAtDesc(Long userId);
     
     /**
+     * Delete all notifications for a user.
+     */
+    void deleteByUserId(Long userId);
+    
+    /**
      * Count unread notifications for a user.
      */
     long countByUserIdAndReadFalse(Long userId);

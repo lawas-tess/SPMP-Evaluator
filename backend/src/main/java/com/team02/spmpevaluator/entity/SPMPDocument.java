@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "spmp_documents")
@@ -53,6 +54,10 @@ public class SPMPDocument {
     @OneToOne(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnoreProperties({"document", "sectionAnalyses", "hibernateLazyInitializer", "handler"})
     private ComplianceScore complianceScore;
+
+    @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties({"document", "hibernateLazyInitializer", "handler"})
+    private List<ComplianceScoreHistory> scoreHistory;
 
     private String notes;
 

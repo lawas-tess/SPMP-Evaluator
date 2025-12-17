@@ -12,11 +12,15 @@ import java.util.Optional;
 @Repository
 public interface ComplianceScoreRepository extends JpaRepository<ComplianceScore, Long> {
     
-    @Query("SELECT cs FROM ComplianceScore cs LEFT JOIN FETCH cs.sectionAnalyses WHERE cs.document = :document")
+    @Query("SELECT cs FROM ComplianceScore cs LEFT JOIN FETCH cs.sectionAnalyses LEFT JOIN FETCH cs.document WHERE cs.document = :document")
     Optional<ComplianceScore> findByDocument(@Param("document") SPMPDocument document);
     
-    Optional<ComplianceScore> findByDocumentId(Long documentId);
+    @Query("SELECT cs FROM ComplianceScore cs LEFT JOIN FETCH cs.document WHERE cs.document.id = :documentId")
+    Optional<ComplianceScore> findByDocumentId(@Param("documentId") Long documentId);
     
-    @Query("SELECT cs FROM ComplianceScore cs LEFT JOIN FETCH cs.sectionAnalyses WHERE cs.document.id = :documentId")
+    @Query("SELECT cs FROM ComplianceScore cs LEFT JOIN FETCH cs.document WHERE cs.document.id = :documentId")
+    Optional<ComplianceScore> findByDocumentIdWithDocument(@Param("documentId") Long documentId);
+    
+    @Query("SELECT cs FROM ComplianceScore cs LEFT JOIN FETCH cs.sectionAnalyses LEFT JOIN FETCH cs.document WHERE cs.document.id = :documentId")
     Optional<ComplianceScore> findByDocumentIdWithSectionAnalyses(@Param("documentId") Long documentId);
 }
