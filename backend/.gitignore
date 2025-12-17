@@ -33,8 +33,9 @@ build/
 .vscode/
 
 ### Local Development Configuration ###
-src/main/resources/application-local.properties
-
+backend/src/main/resources/application-local.properties
+backend/src/main/resources/application.properties
+backend/src/main/resources/application-*.properties
 
 env File/
 *.env
