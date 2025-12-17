@@ -1,27 +1,37 @@
-import React, { useState, useRef } from 'react';
-import { FaFileUpload, FaFilePdf, FaFileWord, FaSpinner, FaCheck, FaTimes } from 'react-icons/fa';
-import { documentAPI } from '../../services/apiService';
+import React, { useState, useRef } from "react";
+import {
+  FaFileUpload,
+  FaFilePdf,
+  FaFileWord,
+  FaSpinner,
+  FaCheck,
+  FaTimes,
+} from "react-icons/fa";
+import { documentAPI } from "../../services/apiService";
 
 const DocumentUpload = ({ onUploadSuccess }) => {
   const [dragOver, setDragOver] = useState(false);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null); // 'success', 'error', null
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
   const fileInputRef = useRef(null);
 
   const allowedTypes = [
-    'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   ];
 
   const validateFile = (file) => {
     if (!allowedTypes.includes(file.type)) {
-      setErrorMessage('Invalid file type. Please upload PDF or DOCX files only.');
+      setErrorMessage(
+        "Invalid file type. Please upload PDF or DOCX files only."
+      );
       return false;
     }
-    if (file.size > 50 * 1024 * 1024) { // 50MB
-      setErrorMessage('File too large. Maximum size is 50MB.');
+    if (file.size > 50 * 1024 * 1024) {
+      // 50MB
+      setErrorMessage("File too large. Maximum size is 50MB.");
       return false;
     }
     return true;
@@ -44,7 +54,7 @@ const DocumentUpload = ({ onUploadSuccess }) => {
     if (droppedFile && validateFile(droppedFile)) {
       setFile(droppedFile);
       setUploadStatus(null);
-      setErrorMessage('');
+      setErrorMessage("");
     }
   };
 
@@ -53,7 +63,7 @@ const DocumentUpload = ({ onUploadSuccess }) => {
     if (selectedFile && validateFile(selectedFile)) {
       setFile(selectedFile);
       setUploadStatus(null);
-      setErrorMessage('');
+      setErrorMessage("");
     }
   };
 
@@ -62,18 +72,20 @@ const DocumentUpload = ({ onUploadSuccess }) => {
 
     setUploading(true);
     setUploadStatus(null);
-    setErrorMessage('');
+    setErrorMessage("");
 
     try {
       const response = await documentAPI.upload(file);
-      setUploadStatus('success');
+      setUploadStatus("success");
       setFile(null);
       if (onUploadSuccess) {
         onUploadSuccess(response.data);
       }
     } catch (error) {
-      setUploadStatus('error');
-      setErrorMessage(error.response?.data?.message || 'Upload failed. Please try again.');
+      setUploadStatus("error");
+      setErrorMessage(
+        error.response?.data?.message || "Upload failed. Please try again."
+      );
     } finally {
       setUploading(false);
     }
@@ -81,38 +93,43 @@ const DocumentUpload = ({ onUploadSuccess }) => {
 
   const getFileIcon = () => {
     if (!file) return null;
-    if (file.type === 'application/pdf') {
+    if (file.type === "application/pdf") {
       return <FaFilePdf className="text-red-500 text-4xl" />;
     }
     return <FaFileWord className="text-blue-500 text-4xl" />;
   };
 
   const formatFileSize = (bytes) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
-      <h3 className="text-xl font-bold text-gray-900 mb-4">Upload SPMP Document</h3>
+      <h3 className="text-xl font-bold text-gray-900 mb-4">
+        Upload SPMP Document
+      </h3>
       <p className="text-gray-600 mb-6">
-        Upload your Software Project Management Plan for IEEE 1058 compliance evaluation
+        Upload your Software Project Management Plan for IEEE 1058 compliance
+        evaluation
       </p>
 
       {/* Drag & Drop Zone */}
       <div
+        data-testid="drop-zone"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
         className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
           dragOver
-            ? 'border-purple-500 bg-purple-50'
-            : 'border-gray-300 hover:border-purple-400 hover:bg-gray-50'
+            ? "border-purple-500 bg-purple-50"
+            : "border-gray-300 hover:border-purple-400 hover:bg-gray-50"
         }`}
       >
         <input
+          data-testid="file-input"
           ref={fileInputRef}
           type="file"
           accept=".pdf,.docx"
@@ -125,7 +142,9 @@ const DocumentUpload = ({ onUploadSuccess }) => {
             {getFileIcon()}
             <div>
               <p className="font-semibold text-gray-900">{file.name}</p>
-              <p className="text-sm text-gray-500">{formatFileSize(file.size)}</p>
+              <p className="text-sm text-gray-500">
+                {formatFileSize(file.size)}
+              </p>
             </div>
             <button
               onClick={(e) => {
@@ -142,8 +161,12 @@ const DocumentUpload = ({ onUploadSuccess }) => {
           <div className="flex flex-col items-center gap-3">
             <FaFileUpload className="text-gray-400 text-5xl" />
             <div>
-              <p className="font-semibold text-gray-700">Drop your file here or click to browse</p>
-              <p className="text-sm text-gray-500 mt-1">Supports PDF and DOCX files up to 50MB</p>
+              <p className="font-semibold text-gray-700">
+                Drop your file here or click to browse
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Supports PDF and DOCX files up to 50MB
+              </p>
             </div>
           </div>
         )}
@@ -158,10 +181,11 @@ const DocumentUpload = ({ onUploadSuccess }) => {
       )}
 
       {/* Success Message */}
-      {uploadStatus === 'success' && (
+      {uploadStatus === "success" && (
         <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
           <FaCheck className="text-green-500" />
-          Document uploaded. Go to "My Documents" and click "Evaluate" to run the analysis.
+          Document uploaded. Go to "My Documents" and click "Evaluate" to run
+          the analysis.
         </div>
       )}
 
