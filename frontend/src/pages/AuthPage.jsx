@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { FaBolt, FaChartBar, FaComment } from "react-icons/fa";
 import { forgotPassword, resetPassword } from "../services/apiService";
+import AuthFormContainer from "./AuthFormContainer.jsx";
 
 // Updated to use the local image from the public folder
 const DASHBOARD_IMAGE = "/AuthBackground.png";
@@ -584,11 +585,6 @@ const AuthPage = () => {
                 </p>
               </div>
             )}
-          </div>
-
-          {/* Right side - Form Container (NARROWER COLUMN - DYNAMIC CONTENT) */}
-          <div className="w-full lg:col-span-3 h-full">
-            <AuthFormContainer />
           </div>
         </div>
       </div>
