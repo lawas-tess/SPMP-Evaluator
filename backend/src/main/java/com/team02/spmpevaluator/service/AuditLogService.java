@@ -107,4 +107,64 @@ public class AuditLogService {
     public List<AuditLog> getUserLogs(Long userId) {
         return auditLogRepository.findByUserId(userId);
     }
+
+    /**
+     * Get all audit logs (admin function).
+     */
+    public List<AuditLog> getAllLogs() {
+        return auditLogRepository.findAll();
+    }
+
+    /**
+     * Get logs by username (admin function).
+     */
+    public List<AuditLog> getLogsByUsername(String username) {
+        return auditLogRepository.findAll().stream()
+                .filter(log -> log.getUser() != null && log.getUser().getUsername().equals(username))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Get logs by action type (admin function).
+     */
+    public List<AuditLog> getLogsByAction(String action) {
+        ActionType actionType = ActionType.valueOf(action);
+        return auditLogRepository.findAll().stream()
+                .filter(log -> log.getAction() == actionType)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Get logs by resource type (admin function).
+     */
+    public List<AuditLog> getLogsByResourceType(String resourceType) {
+        ResourceType type = ResourceType.valueOf(resourceType);
+        return auditLogRepository.findAll().stream()
+                .filter(log -> log.getResourceType() == type)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Get logs between dates (admin function).
+     */
+    public List<AuditLog> getLogsBetweenDates(java.time.LocalDateTime startDate, java.time.LocalDateTime endDate) {
+        return auditLogRepository.findAll().stream()
+                .filter(log -> !log.getCreatedAt().isBefore(startDate) && !log.getCreatedAt().isAfter(endDate))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Get log by ID (admin function).
+     */
+    public AuditLog getLogById(Long id) {
+        return auditLogRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Audit log not found with id: " + id));
+    }
+
+    /**
+     * Get logs by user ID (admin function).
+     */
+    public List<AuditLog> getLogsByUserId(Long userId) {
+        return auditLogRepository.findByUserId(userId);
+    }
 }

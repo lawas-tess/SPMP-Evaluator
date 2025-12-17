@@ -15,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -92,7 +91,7 @@ public class AuthController {
 
             // Authenticate
             try {
-                Authentication authentication = authenticationManager.authenticate(
+                authenticationManager.authenticate(
                         new UsernamePasswordAuthenticationToken(
                                 loginRequest.getUsername(),
                                 loginRequest.getPassword()
@@ -171,7 +170,7 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestParam String token, @RequestParam String newPassword) {
         try {
-            userService.resetPassword(token, newPassword);
+            userService.resetPasswordWithToken(token, newPassword);
             return ResponseEntity.ok("Password successfully reset.");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage(), 400));

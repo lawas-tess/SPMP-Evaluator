@@ -37,9 +37,18 @@ const StudentList = ({ onSelectStudent, refreshTrigger }) => {
         studentList.map(async (student) => {
           try {
             const progressResponse = await reportAPI.getStudentProgress(student.id);
+            const data = progressResponse.data;
+            
+            // Map backend response to expected format
             return {
               ...student,
-              progress: progressResponse.data
+              progress: {
+                totalDocuments: data.documents?.totalUploads || 0,
+                evaluatedDocuments: data.documents?.evaluated || 0,
+                averageScore: parseFloat(data.documents?.averageScore) || 0,
+                totalTasks: data.tasks?.totalTasks || 0,
+                completedTasks: data.tasks?.completed || 0
+              }
             };
           } catch (err) {
             return {

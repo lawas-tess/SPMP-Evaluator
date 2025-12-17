@@ -20,6 +20,11 @@ public interface SPMPDocumentRepository extends JpaRepository<SPMPDocument, Long
      * Find all documents uploaded by a specific user.
      */
     List<SPMPDocument> findByUploadedBy_Id(Long userId);
+    
+    /**
+     * Delete all documents uploaded by a specific user.
+     */
+    void deleteByUploadedById(Long userId);
 
     /**
      * Find documents by evaluation status.
