@@ -1,10 +1,15 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext.jsx';
-import AuthPage from './pages/AuthPage.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import ProtectedRoute from './components/ProtectedRoute.jsx';
-import './App.css';
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext.jsx";
+import AuthPage from "./pages/AuthPage.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import "./App.css";
 
 function App() {
   return (
