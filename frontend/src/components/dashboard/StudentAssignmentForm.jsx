@@ -200,20 +200,18 @@ const StudentAssignmentForm = () => {
                 </tr>
               ) : (
                 assignments.map(assignment => {
-                  const professor = professors.find(p => p.id === assignment.professorId);
-                  const student = students.find(s => s.id === assignment.studentId);
                   return (
                     <tr key={assignment.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
-                        {professor?.name || 'Unknown'}<br />
-                        <span className="text-sm text-gray-500">{professor?.email}</span>
+                        {assignment.professorName || 'Unknown'}<br />
+                        <span className="text-sm text-gray-500">{assignment.professorEmail || 'N/A'}</span>
                       </td>
                       <td className="px-6 py-4">
-                        {student?.name || 'Unknown'}<br />
-                        <span className="text-sm text-gray-500">{student?.email}</span>
+                        {assignment.studentName || 'Unknown'}<br />
+                        <span className="text-sm text-gray-500">{assignment.studentEmail || 'N/A'}</span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        {new Date(assignment.createdAt).toLocaleDateString()}
+                        {assignment.assignedAt ? new Date(assignment.assignedAt).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="px-6 py-4">
                         <button

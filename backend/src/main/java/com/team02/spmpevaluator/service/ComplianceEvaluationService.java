@@ -23,6 +23,7 @@ import java.util.*;
 public class ComplianceEvaluationService {
 
     private final ComplianceScoreRepository complianceScoreRepository;
+    private final OpenRouterService openRouterService; // AI-enhanced findings via Nemotron
 
     private static final Map<SectionAnalysis.IEEE1058Section, Integer> SECTION_WEIGHTS = Map.ofEntries(
             Map.entry(SectionAnalysis.IEEE1058Section.OVERVIEW, 10),
@@ -164,6 +165,19 @@ public class ComplianceEvaluationService {
         String findings = buildFindings(section, sectionPresent, matchedKeywords, keywords.size(), combinedCoverage,
                 subclauseResult);
         String recommendations = buildRecommendations(section, sectionPresent, combinedCoverage, subclauseResult);
+
+        // PHASE 2: Enhance with Nemotron AI for better findings and recommendations (optional, non-blocking)
+        try {
+            if (sectionPresent && openRouterService.isConfigured()) {
+                EnhancedAnalysis aiEnhanced = enhanceWithNemotron(section, findings, recommendations, 
+                                                                   subclauseResult, originalContent);
+                findings = aiEnhanced.aiFindings();
+                recommendations = aiEnhanced.aiRecommendations();
+            }
+        } catch (Exception e) {
+            // Fallback to keyword-based findings if AI service unavailable
+            // This ensures the system remains resilient
+        }
 
         analysis.setFindings(findings);
         analysis.setRecommendations(recommendations);
@@ -831,6 +845,101 @@ public class ComplianceEvaluationService {
     }
 
     private record SubclauseResult(double coveragePct, List<String> missingSubclauses, String evidenceSnippet) {}
+
+    private record EnhancedAnalysis(String aiFindings, String aiRecommendations) {}
+
+    /**
+     * PHASE 2: Enhance section findings with Nemotron AI model.
+     * Provides semantic understanding beyond keyword matching.
+     * Non-blocking: If AI fails, falls back to keyword-based findings.
+     */
+    private EnhancedAnalysis enhanceWithNemotron(SectionAnalysis.IEEE1058Section section,
+                                                  String keywordFindings,
+                                                  String keywordRecommendations,
+                                                  SubclauseResult subclauseResult,
+                                                  String sectionContent) {
+        try {
+            // Prepare prompt for Nemotron to analyze section quality
+            String enhancementPrompt = String.format(
+                    """
+                    You are an IEEE 1058 SPMP compliance expert. Analyze this section of an SPMP document.
+                    
+                    Section: %s
+                    Current Keyword-Based Analysis: %s
+                    
+                    Document Excerpt:
+                    %s
+                    
+                    Provide:
+                    1. FINDINGS: What's the actual quality of this section? Does it adequately cover IEEE 1058 requirements?
+                    2. RECOMMENDATIONS: Specific, actionable improvements needed.
+                    
+                    Keep it concise (2-3 sentences each). Be critical but fair.
+                    
+                    Format:
+                    FINDINGS: [your analysis]
+                    RECOMMENDATIONS: [your suggestions]
+                    """,
+                    section.getDisplayName(),
+                    keywordFindings,
+                    sectionContent.substring(0, Math.min(500, sectionContent.length()))
+            );
+
+            // Call Nemotron via OpenRouter
+            Map<String, Object> aiResponse = openRouterService.analyzeDocument(enhancementPrompt);
+            
+            // Parse AI response
+            String aiFindings = extractFromAIResponse(aiResponse, "FINDINGS");
+            String aiRecommendations = extractFromAIResponse(aiResponse, "RECOMMENDATIONS");
+
+            // Fallback to keyword-based if parsing fails
+            if (aiFindings == null || aiFindings.isEmpty()) {
+                aiFindings = keywordFindings;
+            }
+            if (aiRecommendations == null || aiRecommendations.isEmpty()) {
+                aiRecommendations = keywordRecommendations;
+            }
+
+            return new EnhancedAnalysis(aiFindings, aiRecommendations);
+        } catch (Exception e) {
+            // Graceful fallback to keyword-based analysis
+            return new EnhancedAnalysis(keywordFindings, keywordRecommendations);
+        }
+    }
+
+    /**
+     * Extract specific field from Nemotron AI response.
+     */
+    private String extractFromAIResponse(Map<String, Object> response, String fieldLabel) {
+        try {
+            if (response == null) return null;
+            
+            // Try to get from structured response first
+            String field = fieldLabel + ": ";
+            String summary = response.get("summary") != null ? 
+                            response.get("summary").toString() : null;
+            
+            if (summary != null && summary.contains(field)) {
+                String extracted = summary.substring(summary.indexOf(field) + field.length());
+                // Get text until next field or end
+                int nextField = extracted.indexOf("\n");
+                return nextField > 0 ? extracted.substring(0, nextField).trim() : extracted.trim();
+            }
+            
+            // Try from analysis_summary
+            String analysisSummary = response.get("analysis_summary") != null ?
+                                    response.get("analysis_summary").toString() : null;
+            if (analysisSummary != null && analysisSummary.contains(field)) {
+                String extracted = analysisSummary.substring(analysisSummary.indexOf(field) + field.length());
+                int nextField = extracted.indexOf("\n");
+                return nextField > 0 ? extracted.substring(0, nextField).trim() : extracted.trim();
+            }
+            
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
     /**
      * Get all compliance evaluations (admin function).

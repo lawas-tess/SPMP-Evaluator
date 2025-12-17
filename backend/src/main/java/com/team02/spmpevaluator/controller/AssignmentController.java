@@ -47,7 +47,12 @@ public class AssignmentController {
     @PostMapping
     public ResponseEntity<?> createAssignment(@RequestBody Map<String, Object> request, Authentication authentication) {
         try {
-            Long studentId = Long.valueOf(request.get("studentId").toString());
+            // Validate required fields
+            if (request.get("professorId") == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Missing required field: professorId");
+            }
+
             Long professorId = Long.valueOf(request.get("professorId").toString());
             String notes = request.getOrDefault("notes", "").toString();
 
@@ -55,10 +60,37 @@ public class AssignmentController {
             User admin = userService.findByUsername(username)
                     .orElseThrow(() -> new IllegalArgumentException("Admin not found"));
 
-            StudentProfessorAssignment assignment = assignmentService.assignStudentToProfessor(
-                    studentId, professorId, admin.getId(), notes);
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(convertToDTO(assignment));
+            // Handle bulk assignment (studentIds array) or single assignment (studentId)
+            if (request.get("studentIds") != null) {
+                // Bulk assignment
+                List<?> studentIds = (List<?>) request.get("studentIds");
+                List<AssignmentDTO> assignments = studentIds.stream()
+                        .map(id -> {
+                            try {
+                                Long studentId = Long.valueOf(id.toString());
+                                StudentProfessorAssignment assignment = assignmentService.assignStudentToProfessor(
+                                        studentId, professorId, admin.getId(), notes);
+                                return convertToDTO(assignment);
+                            } catch (Exception e) {
+                                return null;
+                            }
+                        })
+                        .filter(dto -> dto != null)
+                        .collect(Collectors.toList());
+                
+                return ResponseEntity.status(HttpStatus.CREATED).body(
+                    Map.of("success", true, "message", "Assigned " + assignments.size() + " student(s)", 
+                           "assignments", assignments));
+            } else if (request.get("studentId") != null) {
+                // Single assignment
+                Long studentId = Long.valueOf(request.get("studentId").toString());
+                StudentProfessorAssignment assignment = assignmentService.assignStudentToProfessor(
+                        studentId, professorId, admin.getId(), notes);
+                return ResponseEntity.status(HttpStatus.CREATED).body(convertToDTO(assignment));
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Missing required field: either studentId or studentIds");
+            }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Failed to create assignment: " + e.getMessage());
