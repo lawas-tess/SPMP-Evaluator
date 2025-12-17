@@ -35,7 +35,9 @@ This module documents all use cases for the SPMP Evaluator system related to **A
 - **Weight not configured:** System applies default IEEE 1058 weights
 
 ### Exceptions
-- **AI service unavailable:** System queues for retry and notifies admin
+- **AI service timeout (>10 seconds):** System immediately falls back to keyword-based findings (Phase 1 results) without delay
+- **Invalid AI response:** System uses keyword-based recommendations from Phase 1
+- **API rate limit exceeded:** System gracefully degrades to keyword findings
 
 ---
 
@@ -176,7 +178,16 @@ This module documents all use cases for the SPMP Evaluator system related to **A
 - **SPMPDocumentRepository.java**: Eager fetch methods to prevent lazy loading issues
 
 #### Services
-- **ComplianceEvaluationService.java**: IEEE 1058 compliance evaluation (deterministic)
+- **ComplianceEvaluationService.java**: 
+  - Phase 1: Deterministic IEEE 1058 keyword-based scoring (~300ms, 12 sections)
+  - Phase 2: Optional AI enhancement via OpenRouter Amazon Nova model (1-2s per present section)
+  - `analyzeSectionPresence()`: Keyword matching and initial findings/recommendations
+  - `enhanceWithNemotron()`: AI enhancement layer (optional, non-blocking, 10s timeout)
+  - Graceful fallback to Phase 1 if AI unavailable
+- **OpenRouterService.java**:
+  - Model: `amazon/nova-lite-v1:free` (FREE tier via openrouter.ai)
+  - RestTemplate with 10-second timeout (connect + read)
+  - Response parsing: Extracts FINDINGS and RECOMMENDATIONS from AI
 - **ComplianceHistoryService.java**: Score archiving before re-evaluation/override
 - **ReportExportService.java**: Professional PDF/Excel generation with Apache PDFBox/POI
 - **SPMPDocumentService.java**: Document management with cascade delete
@@ -346,23 +357,23 @@ React Component with score visualization and breakdown charts.
 
 ### Back-end Component(s)
 
-**Component Name:** `ScoringController.java`
+**Component Name:** `DocumentController.java`
 
 **Description and purpose:**
-REST endpoints for triggering score generation and retrieving results.
+REST endpoints at /api/documents for triggering score generation and evaluation. Contains POST /api/documents/{id}/evaluate endpoint.
 
 **Component type or format:**
-Spring Boot REST Controller with asynchronous score calculation endpoints.
+Spring Boot REST Controller with document evaluation endpoints.
 
 ---
 
-**Component Name:** `ScoringService.java`
+**Component Name:** `ComplianceEvaluationService.java`
 
 **Description and purpose:**
-Business logic for calculating compliance scores based on parser data and configured weights.
+Business logic for calculating compliance scores based on parser data and IEEE 1058 weighted criteria. Performs section analysis and scoring.
 
 **Component type or format:**
-Spring Service class with weighted scoring algorithm.
+Spring Service class with weighted scoring algorithm and IEEE 1058 compliance evaluation.
 
 ---
 
@@ -385,33 +396,33 @@ class EvaluationResults {
   + showBreakdown(): void
 }
 
-class ScoringController {
-  - scoringService: ScoringService
+class DocumentController {
+  - complianceEvaluationService: ComplianceEvaluationService
   --
-  + generateScore(): ResponseEntity
+  + evaluateDocument(): ResponseEntity
   + getScoreHistory(): ResponseEntity
 }
 
-class ScoringService {
-  - scoringWeights: Map<String, Double>
-  - parserFeedbackRepo: Repository
+class ComplianceEvaluationService {
+  - parserFeedbackService: ParserFeedbackService
+  - openRouterService: OpenRouterService
   --
-  + calculateScore(): Double
+  + calculateScore(): ComplianceScore
   + applyWeights(): Map
   + generateFeedback(): String
 }
 
-class ScoreRecord {
+class ComplianceScore {
   - id: Long
   - documentId: Long
-  - score: Double
-  - breakdown: JSON
-  - timestamp: LocalDateTime
+  - overallScore: Double
+  - sectionScores: JSON
+  - evaluatedAt: LocalDateTime
 }
 
-EvaluationResults --> ScoringController
-ScoringController --> ScoringService
-ScoringService --> ScoreRecord
+EvaluationResults --> DocumentController
+DocumentController --> ComplianceEvaluationService
+ComplianceEvaluationService --> ComplianceScore
 @enduml
 ```
 
@@ -420,14 +431,14 @@ ScoringService --> ScoreRecord
 @startuml ScoreGeneration_Sequence
 !theme plain
 participant "System" as System
-participant "ScoringController" as Ctrl
-participant "ScoringService" as Service
-participant "ParserFeedback" as Parser
+participant "DocumentController" as Ctrl
+participant "ComplianceEvaluationService" as Service
+participant "ParserFeedbackService" as Parser
 participant "Database" as DB
 
-System -> Ctrl: Trigger score generation
+System -> Ctrl: POST /api/documents/{id}/evaluate
 activate Ctrl
-Ctrl -> Service: calculateScore()
+Ctrl -> Service: evaluateDocument()
 activate Service
 Service -> Parser: Get parser data
 activate Parser
@@ -464,20 +475,20 @@ React Component with rubric configuration form and validation.
 
 ### Back-end Component(s)
 
-**Component Name:** `RubricController.java`
+**Component Name:** `GradingCriteriaController.java`
 
 **Description and purpose:**
-REST endpoints for rubric CRUD operations with validation.
+REST endpoints at /api/grading-criteria for rubric CRUD operations with weight validation.
 
 **Component type or format:**
 Spring Boot REST Controller with rubric management endpoints.
 
 ---
 
-**Component Name:** `RubricService.java`
+**Component Name:** `GradingCriteriaService.java`
 
 **Description and purpose:**
-Business logic for rubric management and validation that weights sum to 100%.
+Business logic for rubric management and validation that weights sum to 100%. Handles criterion creation and updates.
 
 **Component type or format:**
 Spring Service class with rubric validation and application logic.
@@ -503,40 +514,33 @@ class GradingCriteria {
   + validateTotal(): boolean
 }
 
-class RubricController {
-  - rubricService: RubricService
+class GradingCriteriaController {
+  - gradingCriteriaService: GradingCriteriaService
   --
-  + createRubric(): ResponseEntity
-  + updateRubric(): ResponseEntity
-  + deleteRubric(): ResponseEntity
+  + createCriteria(): ResponseEntity
+  + updateCriteria(): ResponseEntity
+  + deleteCriteria(): ResponseEntity
 }
 
-class RubricService {
-  - rubricRepository: RubricRepository
+class GradingCriteriaService {
+  - criteriaRepository: GradingCriteriaRepository
   --
-  + saveRubric(): Rubric
+  + saveCriteria(): GradingCriteria
   + validateWeights(): boolean
-  + applyRubric(): Map
+  + applyCriteria(): Map
 }
 
-class Rubric {
+class GradingCriteria {
   - id: Long
   - professor: User
-  - criteria: Criterion[]
-  - totalWeight: Double
-}
-
-class Criterion {
-  - id: Long
   - name: String
   - weight: Double
   - description: String
 }
 
-GradingCriteria --> RubricController
-RubricController --> RubricService
-RubricService --> Rubric
-Rubric --> Criterion
+GradingCriteria --> GradingCriteriaController
+GradingCriteriaController --> GradingCriteriaService
+GradingCriteriaService --> GradingCriteria
 @enduml
 ```
 
@@ -546,23 +550,23 @@ Rubric --> Criterion
 !theme plain
 participant "Professor" as Prof
 participant "GradingCriteria" as UI
-participant "RubricController" as Ctrl
-participant "RubricService" as Service
+participant "GradingCriteriaController" as Ctrl
+participant "GradingCriteriaService" as Service
 participant "Database" as DB
 
 Prof -> UI: Create rubric
 activate UI
 UI -> UI: Add criteria
 UI -> UI: Validate weights (sum=100)
-UI -> Ctrl: POST /api/rubric
+UI -> Ctrl: POST /api/grading-criteria
 activate Ctrl
 Ctrl -> Service: validateAndSave()
 activate Service
 Service -> Service: Check total weight
-Service -> DB: persist(Rubric)
+Service -> DB: persist(GradingCriteria)
 activate DB
 deactivate DB
-Service --> Ctrl: Created rubric
+Service --> Ctrl: Created criteria
 deactivate Service
 Ctrl --> UI: Success
 deactivate Ctrl
@@ -589,23 +593,13 @@ React Component with score input and audit trail display.
 
 ### Back-end Component(s)
 
-**Component Name:** `OverrideController.java`
+**Component Name:** `DocumentController.java`
 
 **Description and purpose:**
-REST endpoints for score override operations with audit logging.
+REST endpoint PUT /api/documents/{id}/override-score for score override operations with audit logging integration.
 
 **Component type or format:**
-Spring Boot REST Controller with override endpoints and audit integration.
-
----
-
-**Component Name:** `OverrideService.java`
-
-**Description and purpose:**
-Business logic for handling score overrides with justification and audit trail.
-
-**Component type or format:**
-Spring Service class with override validation and logging.
+Spring Boot REST Controller with override endpoint and justification validation.
 
 ---
 
@@ -628,33 +622,26 @@ class ScoreOverride {
   + validateRange(): boolean
 }
 
-class OverrideController {
-  - overrideService: OverrideService
+class DocumentController {
+  - complianceScoreRepository: Repository
+  - auditLogService: AuditLogService
   --
   + overrideScore(): ResponseEntity
   + getOverrideHistory(): ResponseEntity
-}
-
-class OverrideService {
-  - scoreRepository: ScoreRepository
-  - auditLog: AuditLogService
-  --
-  + overrideScore(): ScoreRecord
   + validateOverride(): boolean
   + logOverride(): void
 }
 
-class ScoreRecord {
+class ComplianceScore {
   - originalScore: Double
-  - overriddenScore: Double
-  - justification: String
-  - overriddenBy: User
-  - timestamp: LocalDateTime
+  - professorOverride: Double
+  - professorNotes: String
+  - reviewedBy: User
+  - reviewedAt: LocalDateTime
 }
 
-ScoreOverride --> OverrideController
-OverrideController --> OverrideService
-OverrideService --> ScoreRecord
+ScoreOverride --> DocumentController
+DocumentController --> ComplianceScore
 @enduml
 ```
 
@@ -664,28 +651,23 @@ OverrideService --> ScoreRecord
 !theme plain
 participant "Professor" as Prof
 participant "ScoreOverride" as UI
-participant "OverrideController" as Ctrl
-participant "OverrideService" as Service
-participant "AuditLog" as Audit
+participant "DocumentController" as Ctrl
+participant "AuditLogService" as Audit
 participant "Database" as DB
 
 Prof -> UI: Enter override
 activate UI
 UI -> UI: Validate range (0-100)
-UI -> Ctrl: POST /api/scores/{id}/override
+UI -> Ctrl: PUT /api/documents/{id}/override-score
 activate Ctrl
-Ctrl -> Service: overrideScore()
-activate Service
-Service -> Service: Validate override
-Service -> Audit: logOverride()
+Ctrl -> Ctrl: Validate override
+Ctrl -> Audit: logOverride()
 activate Audit
 deactivate Audit
-Service -> DB: Update score
+Ctrl -> DB: Update compliance_score
 activate DB
 deactivate DB
-Service --> Ctrl: Success
-deactivate Service
-Ctrl --> UI: Confirm
+Ctrl --> UI: Success
 deactivate Ctrl
 UI --> Prof: Show success
 deactivate UI
@@ -710,10 +692,10 @@ React Components with score visualization, history timeline, and comparison view
 
 ### Back-end Component(s)
 
-**Component Name:** `ReportController.java`
+**Component Name:** `ReportingController.java`
 
 **Description and purpose:**
-REST endpoints for retrieving score reports and historical data.
+REST endpoints at /api/reports for retrieving score reports, compliance statistics, and historical data.
 
 **Component type or format:**
 Spring Boot REST Controller with report endpoints.
@@ -766,8 +748,8 @@ class ReportExportService {
   + formatReport(): ReportData
 }
 
-SubmissionTracker --> ReportController
-ReportController --> ReportExportService
+SubmissionTracker --> ReportingController
+ReportingController --> ReportExportService
 @enduml
 ```
 
@@ -777,22 +759,19 @@ ReportController --> ReportExportService
 !theme plain
 participant "User" as User
 participant "SubmissionTracker" as UI
-participant "ReportController" as Ctrl
-participant "ReportService" as Service
+participant "ReportingController" as Ctrl
+participant "ReportExportService" as Service
 participant "Database" as DB
 
 User -> UI: Open Dashboard
 activate UI
-UI -> Ctrl: GET /api/reports/submissions
+UI -> Ctrl: GET /api/reports/compliance-statistics
 activate Ctrl
-Ctrl -> Service: getSubmissions()
-activate Service
-Service -> DB: Query submissions + scores
+Ctrl -> DB: Query submissions + scores
 activate DB
-DB --> Service: Data
+DB --> Ctrl: Data
 deactivate DB
-Service --> Ctrl: Submissions
-deactivate Service
+Ctrl -> Ctrl: Calculate statistics
 Ctrl --> UI: Response
 deactivate Ctrl
 UI --> User: Display submissions
@@ -802,7 +781,7 @@ User -> UI: Export Report
 activate UI
 UI -> Ctrl: GET /api/reports/export/{format}
 activate Ctrl
-Ctrl -> Service: export()
+Ctrl -> Service: generatePDF() or generateExcel()
 activate Service
 Service -> Service: Format data
 Service --> Ctrl: File

@@ -395,7 +395,7 @@ CREATE TABLE token_blacklist (
 
 ### Front-end Component(s)
 
-**Component Name:** `ForgotPasswordPage.jsx`
+**Component Name:** `ForgotPasswordPage.jsx` *(Not yet implemented - design documentation only)*
 
 **Description and purpose:**
 Form for requesting password reset with email input and confirmation message. Displays success/error states.
@@ -417,7 +417,7 @@ Spring Boot REST Controller with reset token generation and email service.
 
 ---
 
-**Component Name:** `PasswordResetService.java`
+**Component Name:** `PasswordResetService.java` *(Not yet implemented - design documentation only)*
 
 **Description and purpose:**
 Business logic for generating reset tokens, validating tokens, and updating passwords.
@@ -514,7 +514,7 @@ deactivate UI
 
 ### Front-end Component(s)
 
-**Component Name:** `ChangePasswordPage.jsx`
+**Component Name:** `ChangePasswordPage.jsx` *(Not yet implemented - design documentation only)*
 
 **Description and purpose:**
 Form for authenticated users to change their password with current password verification.

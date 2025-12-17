@@ -5,14 +5,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Service for integrating with OpenRouter AI API.
- * Provides IEEE 1058 compliance analysis using AI models.
+ * Uses nvidia/nemotron-nano-12b-v2-vl:free model which supports multimodal analysis (text + images).
+ * Provides IEEE 1058 compliance analysis for SPMP documents including visual elements.
  */
 @Service
 @Slf4j
@@ -24,14 +29,18 @@ public class OpenRouterService {
     @Value("${openrouter.api.url:https://openrouter.ai/api/v1/chat/completions}")
     private String apiUrl;
 
-    @Value("${openrouter.model:amazon/nova-lite-v1:free}")
+    @Value("${openrouter.model:nvidia/nemotron-nano-12b-v2-vl:free}")
     private String model;
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
     public OpenRouterService() {
-        this.restTemplate = new RestTemplate();
+        // Configure RestTemplate with 10-second timeout to prevent hanging
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10000); // 10 seconds connection timeout
+        factory.setReadTimeout(10000);    // 10 seconds read timeout
+        this.restTemplate = new RestTemplate(factory);
         this.objectMapper = new ObjectMapper();
     }
 
@@ -52,6 +61,31 @@ public class OpenRouterService {
         } catch (Exception e) {
             log.error("AI analysis failed: {}", e.getMessage(), e);
             return getMockAnalysis();
+        }
+    }
+
+    /**
+     * Analyze SPMP document with embedded images (diagrams, flowcharts, architecture diagrams).
+     * Uses nvidia/nemotron-nano-12b-v2-vl:free model which supports multimodal analysis.
+     *
+     * @param documentContent Text content of the SPMP document
+     * @param imageBase64List List of base64-encoded images from the document
+     * @return Structured compliance analysis including image insights
+     */
+    public Map<String, Object> analyzeDocumentWithImages(String documentContent, List<String> imageBase64List) {
+        if (apiKey == null || apiKey.isEmpty()) {
+            log.warn("OpenRouter API key not configured, returning mock analysis");
+            return getMockAnalysis();
+        }
+
+        try {
+            String prompt = buildAnalysisPrompt(documentContent);
+            String response = callOpenRouterAPIWithImages(prompt, imageBase64List);
+            return parseAnalysisResponse(response);
+        } catch (Exception e) {
+            log.error("Multimodal AI analysis failed: {}", e.getMessage(), e);
+            // Fallback to text-only analysis if image processing fails
+            return analyzeDocument(documentContent);
         }
     }
 
@@ -132,28 +166,78 @@ public class OpenRouterService {
     }
 
     /**
-     * Call OpenRouter API with the given prompt.
+     * Call OpenRouter API with text and optional images.
+     * The nvidia/nemotron-nano-12b-v2-vl:free model supports multimodal content.
+     *
+     * @param prompt Text prompt for analysis
+     * @return AI response
      */
     private String callOpenRouterAPI(String prompt) {
+        return callOpenRouterAPIWithImages(prompt, null);
+    }
+
+    /**
+     * Call OpenRouter API with text and optional images.
+     * Supports the nvidia/nemotron-nano-12b-v2-vl:free model which can analyze images.
+     *
+     * @param prompt Text prompt for analysis
+     * @param imageBase64List Optional list of base64-encoded images
+     * @return AI response including image analysis
+     */
+    private String callOpenRouterAPIWithImages(String prompt, List<String> imageBase64List) {
+        if (apiKey == null || apiKey.isEmpty()) {
+            throw new RuntimeException("OpenRouter API key not configured");
+        }
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + apiKey);
         headers.set("HTTP-Referer", "http://localhost:8080");
         headers.set("X-Title", "SPMP Evaluator");
 
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", model);
-        requestBody.put("messages", List.of(
-            Map.of("role", "user", "content", prompt)
-        ));
-        requestBody.put("temperature", 0.3);
-        requestBody.put("max_tokens", 2000);
-
         try {
+            // Build message content
+            List<Map<String, Object>> contentList = new ArrayList<>();
+
+            // Add text content
+            Map<String, Object> textContent = new HashMap<>();
+            textContent.put("type", "text");
+            textContent.put("text", prompt);
+            contentList.add(textContent);
+
+            // Add images if provided
+            if (imageBase64List != null && !imageBase64List.isEmpty()) {
+                for (String imageBase64 : imageBase64List) {
+                    if (imageBase64 != null && !imageBase64.isEmpty()) {
+                        Map<String, Object> imageContent = new HashMap<>();
+                        imageContent.put("type", "image_url");
+                        
+                        Map<String, String> imageUrl = new HashMap<>();
+                        // Format: data:image/png;base64,...
+                        imageUrl.put("url", "data:image/png;base64," + imageBase64);
+                        imageContent.put("image_url", imageUrl);
+                        
+                        contentList.add(imageContent);
+                    }
+                }
+            }
+
+            // Build request body
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", model);
+            requestBody.put("messages", List.of(
+                Map.of("role", "user", "content", contentList)
+            ));
+            requestBody.put("temperature", 0.3);
+            requestBody.put("max_tokens", 2000);
+
             String jsonBody = objectMapper.writeValueAsString(requestBody);
             HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
 
-            log.info("Calling OpenRouter API with model: {}", model);
+            log.info("Calling OpenRouter API with model: {} (images: {})", 
+                     model, 
+                     imageBase64List != null ? imageBase64List.size() : 0);
+
             ResponseEntity<String> response = restTemplate.exchange(
                 apiUrl, HttpMethod.POST, entity, String.class
             );
@@ -163,14 +247,14 @@ public class OpenRouterService {
                 JsonNode choices = root.path("choices");
                 if (choices.isArray() && choices.size() > 0) {
                     String content = choices.get(0).path("message").path("content").asText();
-                    log.info("AI response received successfully");
+                    log.info("AI response received successfully from model: {}", model);
                     return content;
                 }
             }
             throw new RuntimeException("Invalid API response");
         } catch (Exception e) {
-            log.error("OpenRouter API call failed: {}", e.getMessage());
-            throw new RuntimeException("AI service unavailable: " + e.getMessage());
+            log.error("OpenRouter API call failed: {}", e.getMessage(), e);
+            throw new RuntimeException("AI service unavailable: " + e.getMessage(), e);
         }
     }
 

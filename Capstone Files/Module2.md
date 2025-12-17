@@ -943,7 +943,7 @@ Spring Boot REST Controller with `@PostMapping` endpoints. Implements multipart 
 
 ---
 
-**Component Name:** `DocumentService.java`
+**Component Name:** `SPMPDocumentService.java`
 
 **Description and purpose:** 
 Business logic layer for document processing. Validates file format/size, stores files in filesystem (uploads/documents/), creates SPMPDocument entity, and triggers AI evaluation via OpenRouterService.
@@ -1320,6 +1320,19 @@ deactivate List
 
 ---
 
+### Data Design
+
+**Schema (no changes needed - uses existing spmp_documents table):**
+```sql
+-- Delete operation removes the record and associated file
+DELETE FROM spmp_documents WHERE id = ? AND student_id = ?;
+
+-- Cascade deletes also remove associated parser_feedback
+DELETE FROM parser_feedback WHERE document_id = ?;
+```
+
+---
+
 ## 2.4 Student View Feedback (UC 2.4)
 
 ### Front-end Component(s)
@@ -1428,6 +1441,8 @@ deactivate List
 ```
 
 ---
+
+### Data Design
 
 **Schema:**
 ```sql
@@ -1585,6 +1600,8 @@ deactivate Card
 
 ---
 
+### Data Design
+
 **Schema:**
 ```sql
 CREATE TABLE tasks (
@@ -1729,6 +1746,33 @@ deactivate UI
 
 ---
 
+### Data Design
+
+**Schema:**
+```sql
+CREATE TABLE tasks (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description LONGTEXT,
+    deadline DATETIME NOT NULL,
+    status ENUM('PENDING', 'IN_PROGRESS', 'COMPLETED') DEFAULT 'PENDING',
+    priority ENUM('LOW', 'MEDIUM', 'HIGH') DEFAULT 'MEDIUM',
+    assigned_to_user_id BIGINT NOT NULL,
+    created_by_user_id BIGINT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (assigned_to_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_assigned_to (assigned_to_user_id),
+    INDEX idx_created_by (created_by_user_id),
+    INDEX idx_deadline (deadline),
+    INDEX idx_status (status)
+);
+```
+
+---
+
 ## 2.7 Professor Supplement Grading Criteria (UC 2.7)
 
 ### Front-end Component(s)
@@ -1820,6 +1864,28 @@ deactivate UI
 
 ---
 
+### Data Design
+
+**Schema:**
+```sql
+CREATE TABLE grading_criteria (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    professor_id BIGINT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(500),
+    weight DOUBLE NOT NULL DEFAULT 1.0,
+    max_score DOUBLE NOT NULL DEFAULT 100.0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (professor_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_professor_id (professor_id),
+    UNIQUE KEY unique_criteria_per_prof (professor_id, name)
+);
+```
+
+---
+
 ## 2.8 Professor Override AI Results (UC 2.8)
 
 ### Front-end Component(s)
@@ -1865,7 +1931,7 @@ class ScoreOverride {
   + submitOverride(): void
 }
 
-class ScoreOverrideService {
+class DocumentController{
   - feedbackRepository: ParserFeedbackRepository
   - auditLog: AuditLogService
   --
@@ -1880,8 +1946,8 @@ class ParserFeedback {
   - override Justification: String
 }
 
-ScoreOverride --> ScoreOverrideService
-ScoreOverrideService --> ParserFeedback
+ScoreOverride --> DocumentController
+DocumentController--> ParserFeedback
 @enduml
 ```
 
@@ -1891,27 +1957,41 @@ ScoreOverrideService --> ParserFeedback
 !theme plain
 participant "Professor" as Prof
 participant "ScoreOverride" as UI
-participant "ScoreOverrideService" as Service
+participant "DocumentController" as Ctrl
 participant "AuditLog" as Audit
 participant "Database" as DB
 
 Prof -> UI: Enter override score
 activate UI
 UI -> UI: Validate range
-UI -> Service: overrideScore()
-activate Service
-Service -> Service: Validate override
-Service -> Audit: logOverride()
+UI -> Ctrl: PUT /api/documents/{id}/override-score
+activate Ctrl
+Ctrl -> Ctrl: Validate override
+Ctrl -> Audit: logOverride()
 activate Audit
 deactivate Audit
-Service -> DB: Update feedback
+Ctrl -> DB: Update compliance_score
 activate DB
 deactivate DB
-Service --> UI: Success
-deactivate Service
+Ctrl --> UI: Success
+deactivate Ctrl
 UI --> Prof: Confirm override
 deactivate UI
 @enduml
+```
+
+---
+
+### Data Design
+
+**Schema Changes:**
+```sql
+ALTER TABLE parser_feedback ADD COLUMN overridden_score DOUBLE DEFAULT NULL;
+ALTER TABLE parser_feedback ADD COLUMN override_justification LONGTEXT DEFAULT NULL;
+ALTER TABLE parser_feedback ADD COLUMN overridden_by_user_id BIGINT DEFAULT NULL;
+ALTER TABLE parser_feedback ADD COLUMN overridden_at DATETIME DEFAULT NULL;
+ALTER TABLE parser_feedback ADD FOREIGN KEY (overridden_by_user_id) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE parser_feedback ADD INDEX idx_overridden_by (overridden_by_user_id);
 ```
 
 ---
@@ -2036,6 +2116,18 @@ deactivate UI
 
 ---
 
+### Data Design
+
+**Schema Changes:**
+```sql
+ALTER TABLE tasks ADD COLUMN updated_by_user_id BIGINT DEFAULT NULL;
+ALTER TABLE tasks ADD FOREIGN KEY (updated_by_user_id) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE tasks ADD COLUMN previous_deadline DATETIME DEFAULT NULL;
+ALTER TABLE tasks ADD INDEX idx_updated_at (updated_at);
+```
+
+---
+
 ## 2.10 Professor Monitor Student Progress (UC 2.10)
 
 ### Front-end Component(s)
@@ -2052,23 +2144,13 @@ React Component with data visualization and filtering capabilities.
 
 ### Back-end Component(s)
 
-**Component Name:** `ProgressController.java`
+**Component Name:** `ReportingController.java`
 
 **Description and purpose:**
-REST endpoints for retrieving student progress data and statistics.
+REST endpoints for retrieving student progress data and statistics. Contains getStudentProgress() method that aggregates document and task completion metrics.
 
 **Component type or format:**
-Spring Boot REST Controller with `@GetMapping` endpoints.
-
----
-
-**Component Name:** `ProgressService.java`
-
-**Description and purpose:**
-Business logic for aggregating and calculating progress metrics.
-
-**Component type or format:**
-Spring Service class with data aggregation logic.
+Spring Boot REST Controller with `@GetMapping` endpoints including /api/reports/student-progress/{userId}.
 
 ---
 
@@ -2091,14 +2173,14 @@ class StudentProgress {
   + calculateStats(): Statistics
 }
 
-class ProgressController {
+class ReportingController {
   - progressService: ProgressService
   --
   + getClassProgress(): ResponseEntity
   + getStudentMetrics(): ResponseEntity
 }
 
-class ProgressService {
+class ReportingController {
   - documentRepository: DocumentRepository
   - taskRepository: TaskRepository
   --
@@ -2107,8 +2189,8 @@ class ProgressService {
   + aggregateScores(): Map
 }
 
-StudentProgress --> ProgressController
-ProgressController --> ProgressService
+StudentProgress --> ReportingController
+ReportingController--> ReportingController
 @enduml
 ```
 
@@ -2118,31 +2200,53 @@ ProgressController --> ProgressService
 !theme plain
 participant "Professor" as Prof
 participant "StudentProgress" as UI
-participant "ProgressController" as Ctrl
-participant "ProgressService" as Service
+participant "ReportingController" as Ctrl
 participant "Database" as DB
 
 Prof -> UI: Open Progress
 activate UI
-UI -> Ctrl: GET /api/progress/class
+UI -> Ctrl: GET /api/reports/student-progress/{userId}
 activate Ctrl
-Ctrl -> Service: getClassProgress()
-activate Service
-Service -> DB: Query submissions
+Ctrl -> DB: Query submissions
 activate DB
 deactivate DB
-Service -> DB: Query evaluations
+Ctrl -> DB: Query evaluations
 activate DB
 deactivate DB
-Service -> Service: Calculate metrics
-Service --> Ctrl: Progress data
-deactivate Service
-Ctrl --> UI: Response
+Ctrl -> DB: Query tasks
+activate DB
+deactivate DB
+Ctrl -> Ctrl: Calculate metrics
+Ctrl --> UI: Progress data
 deactivate Ctrl
 UI -> UI: Render dashboard
 UI --> Prof: Display progress
 deactivate UI
 @enduml
+```
+
+---
+
+### Data Design
+
+**Schema (for progress views - no new tables, uses existing data):**
+```sql
+-- Query aggregates data from existing tables
+SELECT 
+    s.id,
+    s.first_name,
+    s.last_name,
+    COUNT(d.id) as total_documents,
+    COUNT(pf.id) as evaluated_documents,
+    AVG(pf.compliance_score) as avg_score,
+    COUNT(t.id) as assigned_tasks,
+    SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_tasks
+FROM users s
+LEFT JOIN spmp_documents d ON s.id = d.student_id
+LEFT JOIN parser_feedback pf ON d.id = pf.document_id
+LEFT JOIN tasks t ON s.id = t.assigned_to_user_id
+WHERE s.role = 'STUDENT'
+GROUP BY s.id, s.first_name, s.last_name;
 ```
 
 ---
@@ -2173,10 +2277,10 @@ Spring Boot REST Controller with `@GetMapping`, `@PostMapping`, `@PutMapping`, `
 
 ---
 
-**Component Name:** `AdminUserService.java`
+**Component Name:** `UserService.java`
 
 **Description and purpose:**
-Business logic for user management including validation, password management, and audit logging.
+Business logic for user management including validation, password management, and audit logging. Used by AdminUserController for user lifecycle operations.
 
 **Component type or format:**
 Spring Service class with user lifecycle management.
@@ -2203,7 +2307,7 @@ class UserManagement {
 }
 
 class AdminUserController {
-  - adminUserService: AdminUserService
+  - userService: UserService
   --
   + getAllUsers(): ResponseEntity
   + createUser(): ResponseEntity
@@ -2211,7 +2315,7 @@ class AdminUserController {
   + deleteUser(): ResponseEntity
 }
 
-class AdminUserService {
+class UserService {
   - userRepository: UserRepository
   - passwordEncoder: PasswordEncoder
   - auditLog: AuditLogService
@@ -2231,8 +2335,8 @@ class User {
 }
 
 UserManagement --> AdminUserController
-AdminUserController --> AdminUserService
-AdminUserService --> User
+AdminUserController --> UserService
+UserService --> User
 @enduml
 ```
 
@@ -2243,7 +2347,7 @@ AdminUserService --> User
 participant "Admin" as Admin
 participant "UserManagement" as UI
 participant "AdminUserController" as Ctrl
-participant "AdminUserService" as Service
+participant "UserService" as Service
 participant "Database" as DB
 participant "Audit" as AuditLog
 
@@ -2284,6 +2388,16 @@ deactivate Ctrl
 UI --> Admin: Confirm creation
 deactivate UI
 @enduml
+```
+
+---
+
+### Data Design
+
+**Schema (uses existing users table - no changes needed):**
+```sql
+-- Users table already contains: id, email, first_name, last_name, role, status, created_at
+SELECT * FROM users WHERE role IN ('STUDENT', 'PROFESSOR', 'ADMIN');
 ```
 
 ---
@@ -2406,6 +2520,29 @@ deactivate Ctrl
 UI --> Admin: Confirm assignment
 deactivate UI
 @enduml
+```
+
+---
+
+### Data Design
+
+**Schema:**
+```sql
+CREATE TABLE student_professor_assignments (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    student_id BIGINT NOT NULL,
+    professor_id BIGINT NOT NULL,
+    assigned_by BIGINT NOT NULL,
+    assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    notes TEXT,
+    
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (professor_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_assignment (student_id, professor_id),
+    INDEX idx_professor (professor_id),
+    INDEX idx_assigned_at (assigned_at)
+);
 ```
 
 ---
@@ -2543,6 +2680,30 @@ deactivate UI
 
 ---
 
+### Data Design
+
+**Schema:**
+```sql
+CREATE TABLE audit_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    action VARCHAR(255) NOT NULL,
+    resource_type VARCHAR(100),
+    resource_id BIGINT,
+    details LONGTEXT,
+    timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ip_address VARCHAR(50),
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_user_id (user_id),
+    INDEX idx_timestamp (timestamp),
+    INDEX idx_action (action),
+    INDEX idx_resource (resource_type, resource_id)
+);
+```
+
+---
+
 ## 2.14 Admin System Reports (UC 2.14)
 
 ### Front-end Component(s)
@@ -2559,23 +2720,23 @@ React Component with chart rendering, parameter selection, and export options.
 
 ### Back-end Component(s)
 
-**Component Name:** `ReportController.java`
+**Component Name:** `ReportingController.java`
 
 **Description and purpose:**
-REST endpoints for report generation with various metrics and data aggregation.
+REST endpoints for report generation with various metrics and data aggregation. Handles compliance statistics, student performance, and trends.
 
 **Component type or format:**
-Spring Boot REST Controller with report generation endpoints.
+Spring Boot REST Controller with report generation endpoints at /api/reports/*.
 
 ---
 
-**Component Name:** `ReportService.java`
+**Component Name:** `ReportExportService.java`
 
 **Description and purpose:**
-Business logic for calculating report metrics, data aggregation, and statistical analysis.
+Business logic for exporting reports to PDF/Excel formats using Apache PDFBox and Apache POI libraries.
 
 **Component type or format:**
-Spring Service class with complex aggregation queries.
+Spring Service class with document generation and formatting logic.
 
 ---
 
@@ -2598,25 +2759,25 @@ class AdminReports {
   + exportReport(): void
 }
 
-class ReportController {
-  - reportService: ReportService
+class ReportingController {
+  - complianceScoreRepository: ComplianceScoreRepository
+  - documentRepository: SPMPDocumentRepository
+  - userService: UserService
+  - taskService: TaskService
   --
-  + generateReport(): ResponseEntity
-  + exportReport(): ResponseEntity
+  + getComplianceStatistics(): ResponseEntity
+  + getComplianceTrends(): ResponseEntity
 }
 
-class ReportService {
-  - documentRepository: DocumentRepository
-  - userRepository: UserRepository
-  - taskRepository: TaskRepository
+class ReportExportService {
+  - complianceScoreRepository: Repository
   --
-  + generateUserStats(): Map
-  + generateSubmissionTrends(): List
-  + generateEvaluationMetrics(): Map
+  + generatePDF(): File
+  + generateExcel(): File
 }
 
-AdminReports --> ReportController
-ReportController --> ReportService
+AdminReports --> ReportingController
+ReportingController --> ReportExportService
 @enduml
 ```
 
@@ -2626,8 +2787,8 @@ ReportController --> ReportService
 !theme plain
 participant "Admin" as Admin
 participant "AdminReports" as UI
-participant "ReportController" as Ctrl
-participant "ReportService" as Service
+participant "ReportingController" as Ctrl
+participant "ReportExportService" as Service
 participant "Database" as DB
 
 Admin -> UI: Select Report Type
@@ -2667,6 +2828,32 @@ deactivate UI
 
 ---
 
+### Data Design
+
+**Schema (aggregates data from existing tables):**
+```sql
+-- Report queries use existing tables
+-- User Statistics
+SELECT role, COUNT(*) as count FROM users GROUP BY role;
+
+-- Submission Trends
+SELECT DATE(uploaded_at) as submission_date, COUNT(*) as count 
+FROM spmp_documents 
+GROUP BY DATE(uploaded_at) 
+ORDER BY submission_date DESC;
+
+-- Evaluation Metrics
+SELECT 
+    COUNT(DISTINCT d.id) as total_evaluated,
+    AVG(pf.compliance_score) as avg_compliance,
+    MIN(pf.compliance_score) as min_score,
+    MAX(pf.compliance_score) as max_score
+FROM spmp_documents d
+JOIN parser_feedback pf ON d.id = pf.document_id;
+```
+
+---
+
 ## 2.15 Admin System Settings (UC 2.15)
 
 ### Front-end Component(s)
@@ -2683,7 +2870,7 @@ React Component with settings form, validation, and save confirmation.
 
 ### Back-end Component(s)
 
-**Component Name:** `SystemSettingController.java`
+**Component Name:** `SystemSettingsController.java`
 
 **Description and purpose:**
 REST endpoints for system settings CRUD operations with validation.
@@ -2721,7 +2908,7 @@ class SystemSettingsForm {
   + submitSettings(): void
 }
 
-class SystemSettingController {
+class SystemSettingsController {
   - systemSettingService: SystemSettingService
   --
   + getSettings(): ResponseEntity
@@ -2745,8 +2932,8 @@ class SystemSetting {
   - updatedAt: LocalDateTime
 }
 
-SystemSettingsForm --> SystemSettingController
-SystemSettingController --> SystemSettingService
+SystemSettingsForm --> SystemSettingsController
+SystemSettingsController --> SystemSettingService
 SystemSettingService --> SystemSetting
 @enduml
 ```
@@ -2757,8 +2944,8 @@ SystemSettingService --> SystemSetting
 !theme plain
 participant "Admin" as Admin
 participant "SettingsForm" as UI
-participant "SettingController" as Ctrl
-participant "SettingService" as Service
+participant "SystemSettingsController" as Ctrl
+participant "SystemSettingService" as Service
 participant "Database" as DB
 participant "Cache" as Cache
 
